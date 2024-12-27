@@ -51,3 +51,14 @@ obj/
 Publish/
 */Temp/
 */TestResults/
+/ScriptTest/Antlr/Python3Lexer.tokens
+/ScriptTest/Antlr/Python3Parser.interp
+/ScriptTest/Antlr/Python3Parser.tokens
+/ScriptTest/Antlr/Python3ParserBaseListener.cs
+/ScriptTest/Antlr/Python3ParserBaseVisitor.cs
+/ScriptTest/Antlr/Python3ParserListener.cs
+/ScriptTest/Antlr/Python3ParserVisitor.cs
+/ScriptTest/Antlr/Python3Lexer.cs
+/ScriptTest/Antlr/Python3Lexer.interp
+/ScriptTest/Antlr/gen
+/ScriptTest/Antlr/Python3Parser.cs
