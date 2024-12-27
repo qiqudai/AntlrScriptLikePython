@@ -1,0 +1,35 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+      <OutputPath>bin\</OutputPath>
+      <PlatformTarget>x64</PlatformTarget>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+      <OutputPath>bin\</OutputPath>
+      <PlatformTarget>x64</PlatformTarget>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Antlr4.Runtime.Standard" Version="4.13.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Antlr\py\" />
+    </ItemGroup>
+<!--    <ItemGroup>-->
+<!--        <Antlr4 Include="Python3Parser.g4" />-->
+<!--    </ItemGroup>-->
+<!--    <ItemGroup>-->
+<!--        <PackageReference Include="Antlr4.Runtime.Standard" Version="4.13.1" />-->
+<!--        <PackageReference Include="Antlr4BuildTasks" Version="12.8" PrivateAssets="all" IncludeAssets="build" />-->
+<!--    </ItemGroup>-->
+
+</Project>
