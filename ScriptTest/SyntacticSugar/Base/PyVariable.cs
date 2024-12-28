@@ -171,7 +171,7 @@ public record struct PyVariable : IDisposable
         {
             if (a._handle?.Target is set aset && b._handle?.Target is set bset)
             {
-                return new PyVariable(aset + bset);
+                return new PyVariable(aset + bset); 
             }
             throw new InvalidOleVariantTypeException("Set只能与Set运算.");
         }

@@ -23,8 +23,11 @@ class Program1
         Console.WriteLine($"Long Value: {longValue}");
         Console.WriteLine($"Converted Float: {floatValue}");
         
-        Pylist<int>.Test();
-        TupleExt.TestTuple();
+        list.Test();
+        // set.Test();
+        dict.Test();
+        pyint.TEST();
+        // Pyurl.TEST();
         
         // 1. 指定待解析的 Python 脚本路径
         string scriptPath = "py\\selector_events.py"; // 替换为你的 Python 脚本路径

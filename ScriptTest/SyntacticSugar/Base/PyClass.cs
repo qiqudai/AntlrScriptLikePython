@@ -41,9 +41,7 @@ namespace SyntacticSugar
         {
             __del__();
         }
-
-        // 哈希值
-        public override int GetHashCode() => __hash__();
+        
 
         // 字符串表示
         public override string ToString() => __str__();
@@ -85,7 +83,7 @@ namespace SyntacticSugar
         public string __repr__() => $"{GetType().Name}()";
         public string __str__() => __repr__();
 
-        public int __hash__() => base.GetHashCode();
+        public long __hash__() => base.GetHashCode();
 
         // 等价性比较
         public bool __eq__(IPyObject other) => ReferenceEquals(this, other);
@@ -152,21 +150,26 @@ namespace SyntacticSugar
 
         public IPyObject __pos__() => this;
         public IPyObject __abs__() => throw new NotImplementedException("__abs__ not implemented");
+        public IPyObject __round__(long? n = null)
+        {
+            throw new NotImplementedException();
+        }
+
         public IPyObject __round__(int? n = null) => throw new NotImplementedException("__round__ not implemented");
         public IPyObject __trunc__() => throw new NotImplementedException("__trunc__ not implemented");
         public IPyObject __floor__() => throw new NotImplementedException("__floor__ not implemented");
         public IPyObject __ceil__() => throw new NotImplementedException("__ceil__ not implemented");
 
         // 类型转换
-        public int __int__() => throw new NotImplementedException("__int__ not implemented");
+        public long __int__() => throw new NotImplementedException("__int__ not implemented");
         public double __float__() => throw new NotImplementedException("__float__ not implemented");
         public IPyObject __complex__() => throw new NotImplementedException("__complex__ not implemented");
-        public int __index__() => throw new NotImplementedException("__index__ not implemented");
+        public long __index__() => throw new NotImplementedException("__index__ not implemented");
         public string __format__(string format) => throw new NotImplementedException("__format__ not implemented");
         public byte[] __bytes__() => throw new NotImplementedException("__bytes__ not implemented");
 
         // 容器协议
-        public int __len__() => throw new NotImplementedException("__len__ not implemented");
+        public long __len__() => throw new NotImplementedException("__len__ not implemented");
         public IPyObject __getitem__(IPyObject key) => throw new NotImplementedException("__getitem__ not implemented");
 
         public void __setitem__(IPyObject key, IPyObject value) =>

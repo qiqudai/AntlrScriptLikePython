@@ -6,7 +6,8 @@ using System.Runtime.InteropServices;
 namespace SyntacticSugar
 {
 
-    public record struct pyint: IPyObject
+    
+    public record struct pyint
     {
         private IntPtr _value; // 核心存储
 
@@ -79,16 +80,16 @@ namespace SyntacticSugar
         public static pyint operator /(pyint a, int b) => new pyint(a.ToLong() / b);
         public static pyint operator /(long a, pyint b) => new pyint(a / b.ToLong());
         public static pyint operator /(int a, pyint b) => new pyint(a / b.ToLong());
-        public static pyint operator /(float a, pyint b) => new pyint(a / b.ToDouble());
         public static pyint operator /(pyint a, double b) => new pyint(a.ToDouble() / b);
         public static pyint operator /(pyint a, float b) => new pyint(a.ToDouble() / b);
         public static pyint operator /(double a, pyint b) => new pyint(a / b.ToDouble());
+        public static pyint operator /(float a, pyint b) => new pyint(a / b.ToDouble());
 
         // 隐式转换为 long
         public static implicit operator long(pyint number) => number.ToLong();
 
         // 隐式转换为 double
-        public static implicit operator double(pyint number) => number.ToDouble();
+        //public static implicit operator double(pyint number) => number.ToDouble();
         public static implicit operator float(pyint number) => (float)number.ToDouble();
 
         // 隐式转换为 PyNumber 从 long
@@ -133,7 +134,8 @@ namespace SyntacticSugar
 
             // 测试除法
             pyint divResult1 = a / b;  // 5 / 3.14
-            pyint divResult2 = a / 10; // 5 / 10
+            pyint divResult4 = a / 1.0;  // 5 / 3.14
+            pyint divResult2 = (a / 10.1); // 5 / 10
             pyint divResult3 = 10 / b; // 10 / 3.14
 
             // 输出加法结果
@@ -168,354 +170,191 @@ namespace SyntacticSugar
             Console.WriteLine($"Double Result: {doubleResult}");  // 输出：3.14
         }
 
-        public void __init__()
-        {
-            throw new NotImplementedException();
-        }
-
-        public void __del__()
-        {
-            throw new NotImplementedException();
-        }
-
         public string __repr__()
         {
-            throw new NotImplementedException();
+            return _value.ToString();
         }
 
         public string __str__()
         {
-            throw new NotImplementedException();
+            return _value.ToString();
         }
 
-        public int __hash__()
+        public long __hash__()
         {
-            throw new NotImplementedException();
+            return _value;
         }
-
-        public bool __eq__(IPyObject other)
+        public bool __eq__(pyint other)
         {
-            throw new NotImplementedException();
+            return _value == other._value;
         }
 
-        public bool __ne__(IPyObject other)
+        public bool __ne__(pyint other)
         {
-            throw new NotImplementedException();
+            return _value != other._value;
         }
 
-        public bool __lt__(IPyObject other)
+        public bool __lt__(pyint other)
         {
-            throw new NotImplementedException();
+            return _value < other._value;
         }
 
-        public bool __le__(IPyObject other)
+        public bool __le__(pyint other)
         {
-            throw new NotImplementedException();
+            return _value <= other._value;
         }
 
-        public bool __gt__(IPyObject other)
+        public bool __gt__(pyint other)
         {
-            throw new NotImplementedException();
+            return _value > other._value;
         }
 
-        public bool __ge__(IPyObject other)
+        public bool __ge__(pyint other)
         {
-            throw new NotImplementedException();
+            return _value >= other._value;
         }
-
-        public IPyObject __add__(IPyObject other)
+        public pyint __add__(pyint other)
         {
-            throw new NotImplementedException();
+            return new pyint((IntPtr)(this._value + other._value));
         }
 
-        public IPyObject __radd__(IPyObject other)
+        public pyint __radd__(pyint other)
         {
-            throw new NotImplementedException();
+            return __add__(other);  // Reverse addition is same as normal addition
         }
 
-        public IPyObject __iadd__(IPyObject other)
+        public pyint __iadd__(pyint other)
         {
-            throw new NotImplementedException();
+            _value = (IntPtr)(this._value + other._value);
+            return this;
         }
 
-        public IPyObject __sub__(IPyObject other)
+        public pyint __sub__(pyint other)
         {
-            throw new NotImplementedException();
+            return new pyint((IntPtr)(this._value - other._value));
         }
 
-        public IPyObject __rsub__(IPyObject other)
+        public pyint __rsub__(pyint other)
         {
-            throw new NotImplementedException();
+            return new pyint((IntPtr)(other._value - this._value));
         }
 
-        public IPyObject __isub__(IPyObject other)
+        public pyint __isub__(pyint other)
         {
-            throw new NotImplementedException();
+            _value = (IntPtr)(this._value - other._value);
+            return this;
         }
 
-        public IPyObject __mul__(IPyObject other)
+        public pyint __mul__(pyint other)
         {
-            throw new NotImplementedException();
+            return new pyint((IntPtr)(this._value * other._value));
         }
 
-        public IPyObject __rmul__(IPyObject other)
+        public pyint __rmul__(pyint other)
         {
-            throw new NotImplementedException();
+            return __mul__(other);  // Reverse multiplication is same as normal multiplication
         }
 
-        public IPyObject __imul__(IPyObject other)
+        public pyint __imul__(pyint other)
         {
-            throw new NotImplementedException();
+            _value = (IntPtr)(this._value * other._value);
+            return this;
         }
 
-        public IPyObject __truediv__(IPyObject other)
+        public pyint __truediv__(pyint other)
         {
-            throw new NotImplementedException();
+            if (other._value == 0) throw new DivideByZeroException();
+            return new pyint((IntPtr)(this._value / other._value));
         }
 
-        public IPyObject __rtruediv__(IPyObject other)
+        public pyint __rtruediv__(pyint other)
         {
-            throw new NotImplementedException();
+            if (this._value == 0) throw new DivideByZeroException();
+            return new pyint((IntPtr)(other._value / this._value));
         }
 
-        public IPyObject __itruediv__(IPyObject other)
+        public pyint __itruediv__(pyint other)
         {
-            throw new NotImplementedException();
+            if (other._value == 0) throw new DivideByZeroException();
+            _value = (IntPtr)(this._value / other._value);
+            return this;
         }
 
-        public IPyObject __floordiv__(IPyObject other)
+        public pyint __floordiv__(pyint other)
         {
-            throw new NotImplementedException();
+            return new pyint((IntPtr)(this._value / other._value));
         }
 
-        public IPyObject __rfloordiv__(IPyObject other)
+        public pyint __rfloordiv__(pyint other)
         {
-            throw new NotImplementedException();
+            return new pyint((IntPtr)(other._value / this._value));
         }
 
-        public IPyObject __ifloordiv__(IPyObject other)
+        public pyint __ifloordiv__(pyint other)
         {
-            throw new NotImplementedException();
+            _value = (IntPtr)(this._value / other._value);
+            return this;
         }
 
-        public IPyObject __mod__(IPyObject other)
+        public pyint __mod__(pyint other)
         {
-            throw new NotImplementedException();
+            return new pyint((IntPtr)(this._value % other._value));
         }
 
-        public IPyObject __rmod__(IPyObject other)
+        public pyint __rmod__(pyint other)
         {
-            throw new NotImplementedException();
+            return new pyint((IntPtr)(other._value % this._value));
         }
 
-        public IPyObject __imod__(IPyObject other)
+        public pyint __imod__(pyint other)
         {
-            throw new NotImplementedException();
+            _value = (IntPtr)(this._value % other._value);
+            return this;
         }
 
-        public IPyObject __pow__(IPyObject other, IPyObject mod = null)
+        public pyint __pow__(pyint other, pyint mod)
         {
-            throw new NotImplementedException();
+            return new pyint((IntPtr)(Math.Pow(this._value, other._value) % mod._value));
         }
 
-        public IPyObject __rpow__(IPyObject other, IPyObject mod = null)
+        public pyint __rpow__(pyint other, pyint mod)
         {
-            throw new NotImplementedException();
+            return new pyint((IntPtr)(Math.Pow(other._value, this._value) % mod._value));
         }
 
-        public IPyObject __ipow__(IPyObject other, IPyObject mod = null)
+        public pyint __ipow__(pyint other, pyint mod)
         {
-            throw new NotImplementedException();
+            _value = (IntPtr)(Math.Pow(this._value, other._value) % mod._value);
+            return this;
         }
 
-        public IPyObject __neg__()
+        public pyint __neg__()
         {
-            throw new NotImplementedException();
+            return new pyint(-this._value);
         }
-
-        public IPyObject __pos()
-        {
-            throw new NotImplementedException();
-        }
-
-        public IPyObject __abs__()
-        {
-            throw new NotImplementedException();
-        }
-
-        public IPyObject __round__(int? n = null)
-        {
-            throw new NotImplementedException();
-        }
-
-        public IPyObject __trunc__()
-        {
-            throw new NotImplementedException();
-        }
-
-        public IPyObject __floor__()
-        {
-            throw new NotImplementedException();
-        }
-
-        public IPyObject __ceil__()
-        {
-            throw new NotImplementedException();
-        }
-
-        public int __int__()
-        {
-            throw new NotImplementedException();
-        }
-
-        public double __float__()
-        {
-            throw new NotImplementedException();
-        }
-
-        public IPyObject __complex__()
-        {
-            throw new NotImplementedException();
-        }
-
-        public int __index__()
-        {
-            throw new NotImplementedException();
-        }
-
         public string __format__(string format)
         {
-            throw new NotImplementedException();
+            return _value.ToString(format);
         }
-
         public byte[] __bytes__()
         {
-            throw new NotImplementedException();
+            return BitConverter.GetBytes(_value);
         }
-
         public int __len__()
         {
-            throw new NotImplementedException();
+            return sizeof(long);
         }
 
-        public IPyObject __getitem__(IPyObject key)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void __setitem__(IPyObject key, IPyObject value)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void __delitem__(IPyObject key)
-        {
-            throw new NotImplementedException();
-        }
-
-        public IEnumerator<IPyObject> __iter__()
-        {
-            throw new NotImplementedException();
-        }
-
-        public IPyObject __next__()
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool __contains__(IPyObject item)
-        {
-            throw new NotImplementedException();
-        }
-
-        public IPyObject __enter__()
-        {
-            throw new NotImplementedException();
-        }
-
-        public void __exit__(Type excType, object excValue, object traceback)
-        {
-            throw new NotImplementedException();
-        }
-
-        public IPyObject __call__(params IPyObject[] args)
-        {
-            throw new NotImplementedException();
-        }
-
-        public IPyObject __getattr__(string name)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void __setattr__(string name, IPyObject value)
-        {
-            throw new NotImplementedException();
-        }
 
         public void __delattr__(string name)
         {
-            throw new NotImplementedException();
+            _value = IntPtr.Zero;
         }
 
-        public IPyObject __getattribute__(string name)
+        public bool __getattribute__(string name)
         {
-            throw new NotImplementedException();
+            return true;
         }
 
-        public IPyObject __get__(IPyObject obj, Type type = null)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void __set__(IPyObject obj, IPyObject value)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void __delete__(IPyObject obj)
-        {
-            throw new NotImplementedException();
-        }
-
-        public IPyObject __getstate__()
-        {
-            throw new NotImplementedException();
-        }
-
-        public void __setstate__(IPyObject state)
-        {
-            throw new NotImplementedException();
-        }
-
-        public IEnumerator<IPyObject> __await__()
-        {
-            throw new NotImplementedException();
-        }
-
-        public IPyObject __aenter__()
-        {
-            throw new NotImplementedException();
-        }
-
-        public void __aexit__(Type excType, object excValue, object traceback)
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool __bool__()
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool __is__(IPyObject other)
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool __is_not__(IPyObject other)
-        {
-            throw new NotImplementedException();
-        }
     }
 }

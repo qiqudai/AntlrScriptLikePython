@@ -4,4 +4,4 @@ global using set = SyntacticSugar.Pyset<SyntacticSugar.pyint>;
 global using frozenset = SyntacticSugar.Pyfrozenset<SyntacticSugar.pyint>;
 global using time = SyntacticSugar.Pytime;
 global using tuple = SyntacticSugar.Pytuple<SyntacticSugar.pyint>;
-global using pyclass = SyntacticSugar.Pyob;
+global using pyclass = SyntacticSugar.PyClass;

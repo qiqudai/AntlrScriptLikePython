@@ -12,7 +12,7 @@ public interface IPyObject
     string __str__();
 
     // 哈希值
-    int __hash__();
+    long __hash__();
 
     // 等价性比较
     bool __eq__(IPyObject other);
@@ -57,21 +57,21 @@ public interface IPyObject
     IPyObject __neg__();
     IPyObject __pos();
     IPyObject __abs__();
-    IPyObject __round__(int? n = null);
+    IPyObject __round__(IPyObject self, int ndigits=0);
     IPyObject __trunc__();
     IPyObject __floor__();
     IPyObject __ceil__();
 
     // 类型转换
-    int __int__();
+    long __int__();
     double __float__();
     IPyObject __complex__();
-    int __index__();
+    long __index__();
     string __format__(string format);
     byte[] __bytes__();
 
     // 容器协议
-    int __len__();
+    long __len__();
     IPyObject __getitem__(IPyObject key);
     void __setitem__(IPyObject key, IPyObject value);
     void __delitem__(IPyObject key);
