@@ -1,3 +1,37 @@
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2014 by Bart Kiers
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * Project      : python3-parser; an ANTLR4 grammar for Python 3
+ *                https://github.com/bkiers/python3-parser
+ * Developed by : Bart Kiers, bart@big-o.nl
+ */
+
+// $antlr-format alignTrailingComments true, columnLimit 150, maxEmptyLinesToKeep 1, reflowComments false, useTab false
+// $antlr-format allowShortRulesOnASingleLine true, allowShortBlocksOnASingleLine true, minEmptyLines 0, alignSemicolons ownLine
+// $antlr-format alignColons trailing, singleLineOverrulesHangingColon true, alignLexerCommands true, alignLabels true, alignTrailers true
 
 lexer grammar Python3Lexer;
 
@@ -5,7 +39,6 @@ lexer grammar Python3Lexer;
 // The Python Language Reference
 
 tokens {
-    INDENT,
     DEDENT
 }
 
@@ -19,7 +52,7 @@ options {
  * lexer rules
  */
 
-STRING: STRING_LITERAL | BYTES_LITERAL | STRING_QUICK;
+STRING: STRING_LITERAL | BYTES_LITERAL;
 
 NUMBER: INTEGER | FLOAT_NUMBER | IMAG_NUMBER;
 
@@ -71,18 +104,9 @@ AND2         : '&&';  // 匹配 'and' 或 '||'
 OR2         : '||';
 NOT2        : '!';
 
-SECTION_FUNCTION : '[@';
-ASYNC_SECTION_FUNCTION : '[`@' ;
-PRIVATE_SECTION_FUNCTION : '[~';
-ASYNC_PRIVATE_SECTION_FUNCTION : '[`~';
-
+//WS : [ \t]+ -> skip ;  //跳过行首的空白字符
 NEWLINE: ({this.atStartOfInput()}? SPACES | ( '\r'? '\n' | '\r') SPACES?) {this.onNewLine();};
 
-//fragment NEWLINE:
-//    '\r\n'
-//    | '\r'
-//    | '\n'
-//;
 /// identifier   ::=  id_start id_continue*
 NAME: ID_START ID_CONTINUE*;
 
@@ -295,8 +319,4 @@ fragment ID_CONTINUE:
     | [\p{Pc}]
     //| [\p{Other_ID_Continue}]
     | UNICODE_OIDC
-;
-
-// 不需要引号的字符串
-fragment STRING_QUICK: (~[0-9\r\n\f \t'#"]+) | (STRING_ESCAPE_SEQ | ~[\r\n\f \t'#"])+
 ;

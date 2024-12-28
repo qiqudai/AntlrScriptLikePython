@@ -3,13 +3,29 @@ using System.IO;
 using System.Text;
 using Antlr4.Runtime;
 using Antlr4.Runtime.Tree;
-using ScriptTest; // 用于访问语法树
+using ScriptTest;
+using SyntacticSugar; // 用于访问语法树
 
 
 class Program1
 {
     static void Main(string[] args)
     {
+        long longValue = 0x3FF0000000000000; // IEEE 754 二进制表示的 1.0
+        double doubleValue = BitConverter.Int64BitsToDouble(longValue);
+
+        Console.WriteLine($"Long Value: {longValue}");
+        Console.WriteLine($"Interpreted Double: {doubleValue}");
+
+        
+        double floatValue = longValue;
+
+        Console.WriteLine($"Long Value: {longValue}");
+        Console.WriteLine($"Converted Float: {floatValue}");
+        
+        Pylist<int>.Test();
+        TupleExt.TestTuple();
+        
         // 1. 指定待解析的 Python 脚本路径
         string scriptPath = "py\\selector_events.py"; // 替换为你的 Python 脚本路径
 
