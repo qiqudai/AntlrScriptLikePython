@@ -23,13 +23,14 @@ public record struct PyVariable : IDisposable
 {
     private pyint _value; // 核心存储
     private TypeFlag _type; // 当前存储内容的类型标志
-    private GCHandle? _handle; // 可选的句柄（用于引用类型）
+    private IPyObject? _handle; // 可选的句柄（用于引用类型）
 
 
     // 构造函数（整型）
     public PyVariable(long value)
     {
         _value = new (value);
+        _handle = null;
         _type = TypeFlag.Integer;
     }
 
@@ -37,78 +38,103 @@ public record struct PyVariable : IDisposable
     public PyVariable(double value)
     {
         _value = new ((long)value);
+        _handle = null;
         _type = TypeFlag.Float;
     }
 
     // 构造函数（字符串）
     public PyVariable(string value)
     {
-        _handle = GCHandle.Alloc(value);
-        _value = GCHandle.ToIntPtr(_handle.Value);
+        _handle = (PyString)value;
+        _value = 0;
         _type = TypeFlag.String;
     }
 
     // 构造函数（列表）
     public PyVariable(list value)
     {
-        _handle = GCHandle.Alloc(value);
-        _value = GCHandle.ToIntPtr(_handle.Value);
+        _handle = (list)value;
+        _value = 0;
         _type = TypeFlag.List;
     }
 
     // 构造函数（字典）
     public PyVariable(dict value)
     {
-        _handle = GCHandle.Alloc(value);
-        _value = GCHandle.ToIntPtr(_handle.Value);
+        _handle = (dict)value;
+        _value = 0;
         _type = TypeFlag.Dictionary;
     }
     // 构造函数（字典）
     public PyVariable(tuple value)
     {
-        _handle = GCHandle.Alloc(value);
-        _value = GCHandle.ToIntPtr(_handle.Value);
+        _handle = value;
+        _value = 0;
         _type = TypeFlag.Tuple;
     }
     
     // 构造函数（字典）
     public PyVariable(set value)
     {
-        _handle = GCHandle.Alloc(value);
-        _value = GCHandle.ToIntPtr(_handle.Value);
+        _handle = (set)value;
+        _value = 0;
         _type = TypeFlag.Set;
     }
     // 构造函数（字典）
     public PyVariable(frozenset value)
     {
-        _handle = GCHandle.Alloc(value);
-        _value = GCHandle.ToIntPtr(_handle.Value);
+        _handle = (frozenset)value;
+        _value = 0;
         _type = value is set ? TypeFlag.Set : TypeFlag.Frozenset;
     }
     // 构造函数（字典）
     public PyVariable(pyclass value)
     {
-        _handle = GCHandle.Alloc(value);
-        _value = GCHandle.ToIntPtr(_handle.Value);
+        _handle = value;
+        _value = 0;
         _type = TypeFlag.Class;
     }
 
-    // 根据存储的值和目标类型返回值
-    public T get<T>()
+    public pyint? get()
     {
-        object result = _type switch
+        switch (_type)
         {
-            TypeFlag.Integer when typeof(T).IsValueType => (long)_value,
-            TypeFlag.Float when typeof(T).IsValueType => _value,
-            TypeFlag.String when typeof(T) == typeof(string) => _handle.HasValue ? (string)_handle.Value.Target : null,
-            TypeFlag.Dictionary when typeof(T) == typeof(dict) => _handle.HasValue ? (dict)_handle.Value.Target : null,
-            TypeFlag.Frozenset when typeof(T) == typeof(frozenset) => _handle.HasValue ? (frozenset)_handle.Value.Target : null,
-            TypeFlag.Set when typeof(T) == typeof(set) => _handle.HasValue ? (set)_handle.Value.Target : null,
-            TypeFlag.Dictionary when typeof(T) == typeof(tuple) => _handle.HasValue ? (tuple)_handle.Value.Target : null,
-            _ => throw new InvalidOperationException($"Unsupported conversion: {_type} to {typeof(T)}")
-        };
-
-        return (T)result;
+            case SyntacticSugar.TypeFlag.None:
+                return null;
+            case SyntacticSugar.TypeFlag.Integer:
+            case SyntacticSugar.TypeFlag.Float:
+                return _value;
+            default:
+                throw new InvalidOleVariantTypeException("var not value type");
+        }
+    }
+    
+    // 根据存储的值和目标类型返回值
+    public T? get<T>() where T : class
+    {
+        switch (_type)
+        {
+            case SyntacticSugar.TypeFlag.None:
+                return null;
+            case SyntacticSugar.TypeFlag.String:
+                return (T?)(object?)(_handle as PyString);
+            case SyntacticSugar.TypeFlag.Frozenset:
+                return (T?)(object?)(_handle as frozenset);
+            case SyntacticSugar.TypeFlag.Set:
+                return (T?)(object?)(_handle as set);
+            case SyntacticSugar.TypeFlag.List:
+                return (T?)(object?)(_handle as list);
+            case SyntacticSugar.TypeFlag.Tuple:
+                return (T?)(object?)(_handle as tuple);
+            case SyntacticSugar.TypeFlag.Dictionary:
+                return (T?)(object?)(_handle as dict);
+            case SyntacticSugar.TypeFlag.Class:
+                return (T?)(object?)(_handle as PyClass);
+            case TypeFlag.Integer:
+            case TypeFlag.Float:
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
     }
 
 
@@ -116,9 +142,8 @@ public record struct PyVariable : IDisposable
     public void Dispose()
     {
         if (_type == TypeFlag.None) return;
-        if (_handle is { IsAllocated: true })
+        if (_handle != null)
         {
-            _handle.Value.Free();
             _handle = null;
         }
         _value = IntPtr.Zero;
@@ -137,7 +162,7 @@ public record struct PyVariable : IDisposable
     {
         if (a._type == TypeFlag.String || b._type == TypeFlag.String)
         {
-            if (a._handle?.Target is tuple astr && b._handle?.Target is tuple bstr)
+            if (a._handle is tuple astr && b._handle is tuple bstr)
             {
                 return new PyVariable(astr + bstr);
             }
@@ -145,7 +170,7 @@ public record struct PyVariable : IDisposable
 
         if (a._type == TypeFlag.Dictionary || b._type == TypeFlag.Dictionary)
         {
-            if (a._handle?.Target is dict a_dict && b._handle?.Target is dict bdict)
+            if (a._handle is dict a_dict && b._handle is dict bdict)
             {
                 return new PyVariable(a_dict + bdict);
             }
@@ -153,7 +178,7 @@ public record struct PyVariable : IDisposable
         }
         if (a._type == TypeFlag.Class || b._type == TypeFlag.Class)
         {
-            if (a._handle?.Target is pyclass aclass && b._handle?.Target is pyclass bclass)
+            if (a._handle is pyclass aclass && b._handle is pyclass bclass)
             {
                 return new PyVariable(aclass + bclass);
             }
@@ -161,7 +186,7 @@ public record struct PyVariable : IDisposable
         }
         if (a._type == TypeFlag.List || b._type == TypeFlag.List)
         {
-            if (a._handle?.Target is list ali && b._handle?.Target is list bli)
+            if (a._handle is list ali && b._handle is list bli)
             {
                 return new PyVariable(ali + bli);
             }
@@ -169,7 +194,7 @@ public record struct PyVariable : IDisposable
         }
         if (a._type == TypeFlag.Set || b._type == TypeFlag.Set)
         {
-            if (a._handle?.Target is set aset && b._handle?.Target is set bset)
+            if (a._handle is set aset && b._handle is set bset)
             {
                 return new PyVariable(aset + bset); 
             }
@@ -177,7 +202,7 @@ public record struct PyVariable : IDisposable
         }
         if (a._type == TypeFlag.Tuple || b._type == TypeFlag.Tuple)
         {
-            if (a._handle?.Target is tuple atuple && b._handle?.Target is tuple btuple)
+            if (a._handle is tuple atuple && b._handle is tuple btuple)
             {
                 return new PyVariable(atuple + btuple);
             }

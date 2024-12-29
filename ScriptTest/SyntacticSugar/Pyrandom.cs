@@ -68,7 +68,7 @@ namespace SyntacticSugar
         }
 
         // choice()
-        public pyint choice(list seq)
+        public PyVariable choice(list seq)
         {
             if (seq.Count == 0) throw new InvalidOperationException("Cannot choose from an empty sequence.");
             return seq[_random.Next(seq.Count)];
@@ -97,13 +97,13 @@ namespace SyntacticSugar
             else
             {
                 // Weighted distribution
-                double totalWeight = weights.Sum(w => w.get<double>());
+                double totalWeight = weights.Sum(w => (double)w.get());
                 var cumulativeWeights = new List<double>();
                 double cumulativeSum = 0;
 
                 foreach (var weight in weights)
                 {
-                    cumulativeSum += weight.get<double>();
+                    cumulativeSum += (double)weight.get();
                     cumulativeWeights.Add(cumulativeSum);
                 }
 
@@ -130,9 +130,7 @@ namespace SyntacticSugar
             {
                 n--;
                 int k = _random.Next(n + 1);
-                pyint value = x[k];
-                x[k] = x[n];
-                x[n] = value;
+                (x[k], x[n]) = (x[n], x[k]);
             }
         }
 
@@ -237,7 +235,7 @@ namespace SyntacticSugar
             // Test random methods
             Console.WriteLine(pyRandom.randint(1, 10));
             Console.WriteLine(pyRandom.choice(new list
-                { new pyint(1), new pyint(2), new pyint(3), new pyint(4) }));
+                { new PyVariable(1), new PyVariable(2), new PyVariable(3), new PyVariable(4) }));
             Console.WriteLine(pyRandom.random());
             Console.WriteLine(pyRandom.uniform(1.0, 5.0));
         }

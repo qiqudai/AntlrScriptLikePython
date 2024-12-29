@@ -1,10 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 
 namespace SyntacticSugar
 {
-    public class PyDict<K, V> : Dictionary<K, V>
+    public class PyDict<K, V> : Dictionary<K, V>, IPyObject
     {
         // 使用键值对初始化
         public PyDict() : base() { }
@@ -19,52 +20,17 @@ namespace SyntacticSugar
         // + 运算符：合并两个字典
         public static PyDict<K, V> operator +(PyDict<K, V> a, PyDict<K, V> b)
         {
-            var result = new PyDict<K, V>(a);
-            foreach (var kvp in b)
-            {
-                result[kvp.Key] = kvp.Value; // 如果键重复，后面的值会覆盖前面的
-            }
-            return result;
+            a.update(b);
+            return a;
         }
 
         // | 运算符：合并两个字典，right 字典中的值会覆盖 left 字典中的相同键
         public static PyDict<K, V> operator |(PyDict<K, V> left, PyDict<K, V> right)
         {
-            // 创建一个新字典，将 left 字典的元素复制过去
-            var result = new PyDict<K, V>(left);
-
-            // 遍历 right 字典，并将其键值对添加到结果字典
-            foreach (var kvp in right)
-            {
-                result[kvp.Key] = kvp.Value; // 如果键存在，right 字典的值会覆盖 left 字典的值
-            }
-
-            return result;
+            left.update(right);
+            return left;
         }
-        // |= 运算符：将 other 的键值对合并到 d 中，若有重复键，other 的值优先
-        public static void orEqual(PyDict<K, V> left, pyint right)
-        {
-            if (right is PyDict<K, V> rightDict)
-            {
-                // 如果 right 是一个 PyDict 字典，直接合并
-                foreach (var kvp in rightDict)
-                {
-                    left[kvp.Key] = kvp.Value; // 更新字典中的键值对
-                }
-            }
-            else if (right is IEnumerable<KeyValuePair<K, V>> rightEnumerable)
-            {
-                // 如果 right 是一个键值对的集合，遍历并合并
-                foreach (var kvp in rightEnumerable)
-                {
-                    left[kvp.Key] = kvp.Value; // 更新字典中的键值对
-                }
-            }
-            else
-            {
-                throw new ArgumentException("The right operand must be a dictionary or an enumerable of key-value pairs.");
-            }
-        }
+        
 
         // 解包字典为关键字参数
         public static void unpackAndPrint(Dictionary<string, object> d)
@@ -260,6 +226,111 @@ namespace SyntacticSugar
 
             // 模式匹配测试
             // matchPattern(dict);
+        }
+
+        public void __init__(IPyObject o)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string __repr__()
+        {
+            throw new NotImplementedException();
+        }
+
+        public string __str__()
+        {
+            throw new NotImplementedException();
+        }
+
+        public long __hash__()
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool __eq__(IPyObject other)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool __ne__(IPyObject other)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool __lt__(IPyObject other)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool __le__(IPyObject other)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool __gt__(IPyObject other)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool __ge__(IPyObject other)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IPyObject __add__(IPyObject other)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IPyObject __sub__(IPyObject other)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IPyObject __mul__(IPyObject other)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IPyObject __truediv__(IPyObject other)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IPyObject __mod__(IPyObject other)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string __format__(string format)
+        {
+            throw new NotImplementedException();
+        }
+
+        public long __len__()
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool __contains__(IPyObject item)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void __setattr__(string name, IPyObject value)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void __delattr__(string name)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IPyObject __getattribute__(string name)
+        {
+            throw new NotImplementedException();
         }
     }
 }

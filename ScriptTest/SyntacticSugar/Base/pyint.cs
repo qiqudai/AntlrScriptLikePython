@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Frozen;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 
 namespace SyntacticSugar
 {
@@ -9,19 +11,19 @@ namespace SyntacticSugar
     
     public record struct pyint
     {
-        private IntPtr _value; // 核心存储
+        private double _value; // 核心存储
 
 
         // 构造函数（整型）
         public pyint(long value)
         {
-            _value = new IntPtr(value);
+            _value = value;
         }
 
         // 构造函数（浮点型）
         public pyint(double value)
         {
-            _value = new IntPtr((long)value);
+            _value = value;
         }
 
         // 构造函数（浮点型）
@@ -31,81 +33,90 @@ namespace SyntacticSugar
         }
 
         // 将 PyNumber 转换为 long
-        public long ToLong() => _value.ToInt64();
+        public long ToLong() => (long)_value;
 
         // 将 PyNumber 转换为 double
-        public double ToDouble() => (double)_value.ToInt64();
+        public double ToDouble() => _value;
 
-        public override string ToString() => _value.ToString();
+        public override string ToString() => _value.ToString(CultureInfo.InvariantCulture);
 
 
         #region 接口实现
         
         // 重载加法操作符
-        public static pyint operator +(pyint a, pyint b) => new pyint(a.ToLong() + b.ToLong());
-        public static pyint operator +(pyint a, long b) => new pyint(a.ToLong() + b);
-        public static pyint operator +(pyint a, int b) => new pyint(a.ToLong() + b);
-        public static pyint operator +(long a, pyint b) => new pyint(a + b.ToLong());
-        public static pyint operator +(int a, pyint b) => new pyint(a + b.ToLong());
-        public static pyint operator +(float a, pyint b) => new pyint(a + b.ToDouble());
-        public static pyint operator +(pyint a, float b) => new pyint(a.ToDouble() + b);
-        public static pyint operator +(pyint a, double b) => new pyint(a.ToDouble() + b);
-        public static pyint operator +(double a, pyint b) => new pyint(a + b.ToDouble());
+        //确定值
+        public static long operator +(pyint a, pyint b) => (long)a + (long)b;
+        public static long operator +(pyint a, long b) => (long)a + b;
+        public static long operator +(pyint a, int b) => (long)a + b;
+        public static long operator +(long a, pyint b) => a + (long)b;
+        public static long operator +(int a, pyint b) => a + (long)b;
+        public static double operator +(float a, pyint b) => a + b;
+        public static double operator +(pyint a, float b) => a + b;
+        public static double operator +(pyint a, double b) => a + b;
+        public static double operator +(double a, pyint b) => a + b;
 
         // 重载减法操作符
-        public static pyint operator -(pyint a, pyint b) => new pyint(a.ToLong() - b.ToLong());
-        public static pyint operator -(pyint a, long b) => new pyint(a.ToLong() - b);
-        public static pyint operator -(pyint a, int b) => new pyint(a.ToLong() - b);
-        public static pyint operator -(long a, pyint b) => new pyint(a - b.ToLong());
-        public static pyint operator -(int a, pyint b) => new pyint(a - b.ToLong());
-        public static pyint operator -(float a, pyint b) => new pyint(a - b.ToDouble());
-        public static pyint operator -(pyint a, double b) => new pyint(a.ToDouble() - b);
-        public static pyint operator -(pyint a, float b) => new pyint(a.ToDouble() - b);
-        public static pyint operator -(double a, pyint b) => new pyint(a - b.ToDouble());
+        public static long operator -(pyint a, pyint b) => (long)a - (long)b;
+        public static long operator -(pyint a, long b) => (long)a - b;
+        public static long operator -(pyint a, int b) => (long)a - b;
+        public static long operator -(long a, pyint b) => a - (long)b;
+        public static long operator -(int a, pyint b) => a - (long)b;
+        public static double operator -(float a, pyint b) => a - b;
+        public static double operator -(pyint a, double b) => a - b;
+        public static double operator -(pyint a, float b) => a - b;
+        public static double operator -(double a, pyint b) => a - b;
 
         // 重载乘法操作符
-        public static pyint operator *(pyint a, pyint b) => new pyint(a.ToLong() * b.ToLong());
-        public static pyint operator *(pyint a, long b) => new pyint(a.ToLong() * b);
-        public static pyint operator *(pyint a, int b) => new pyint(a.ToLong() * b);
-        public static pyint operator *(long a, pyint b) => new pyint(a * b.ToLong());
-        public static pyint operator *(int a, pyint b) => new pyint(a * b.ToLong());
-        public static pyint operator *(float a, pyint b) => new pyint(a * b.ToDouble());
-        public static pyint operator *(pyint a, double b) => new pyint(a.ToDouble() * b);
-        public static pyint operator *(pyint a, float b) => new pyint(a.ToDouble() * b);
-        public static pyint operator *(double a, pyint b) => new pyint(a * b.ToDouble());
+        public static long operator *(pyint a, pyint b) => (long)a * (long)b;
+        public static long operator *(pyint a, long b) => (long)a * b;
+        public static long operator *(pyint a, int b) => (long)a * b;
+        public static long operator *(long a, pyint b) => a * (long)b;
+        public static long operator *(int a, pyint b) => a * (long)b;
+        public static pyint operator *(float a, pyint b) => a * b;
+        public static pyint operator *(pyint a, double b) => a * b;
+        public static pyint operator *(pyint a, float b) => a * b;
+        public static pyint operator *(double a, pyint b) => a * b;
 
         // 重载除法操作符
-        public static pyint operator /(pyint a, pyint b) => new pyint(a.ToLong() / b.ToLong());
-        public static pyint operator /(pyint a, long b) => new pyint(a.ToLong() / b);
-        public static pyint operator /(pyint a, int b) => new pyint(a.ToLong() / b);
-        public static pyint operator /(long a, pyint b) => new pyint(a / b.ToLong());
-        public static pyint operator /(int a, pyint b) => new pyint(a / b.ToLong());
-        public static pyint operator /(pyint a, double b) => new pyint(a.ToDouble() / b);
-        public static pyint operator /(pyint a, float b) => new pyint(a.ToDouble() / b);
-        public static pyint operator /(double a, pyint b) => new pyint(a / b.ToDouble());
-        public static pyint operator /(float a, pyint b) => new pyint(a / b.ToDouble());
+        public static long operator /(pyint a, pyint b) => (long)a / (long)b;
+        public static long operator /(pyint a, long b) => (long)a / b;
+        public static long operator /(pyint a, int b) => (long)a / b;
+        public static long operator /(long a, pyint b) => a / (long)b;
+        public static long operator /(int a, pyint b) => a / (long)b;
+        public static double operator /(pyint a, double b) => a / b;
+        public static double operator /(pyint a, float b) => a / b;
+        public static double operator /(double a, pyint b) => a / b;
+        public static double operator /(float a, pyint b) => a / b;
 
         // 隐式转换为 long
-        public static implicit operator long(pyint number) => number.ToLong();
-
+        public static implicit operator long(pyint number) => (long)number;
+        public static implicit operator int(pyint number) => (int)(long)number;
+        public static implicit operator uint(pyint number) => (uint)(long)number;
+        public static implicit operator short(pyint number) => (short)(long)number;
+        public static implicit operator ushort(pyint number) => (ushort)(long)number;
+        public static implicit operator byte(pyint number) => (byte)(long)number;
+        public static implicit operator sbyte(pyint number) => (sbyte)(long)number;
+        public static implicit operator ulong(pyint number) => (ulong)(long)number;
         // 隐式转换为 double
-        //public static implicit operator double(pyint number) => number.ToDouble();
-        public static implicit operator float(pyint number) => (float)number.ToDouble();
+        //public static implicit operator double(pyint number) => number;
+        public static implicit operator float(pyint number) => (float)number;
+        public static implicit operator double(pyint number) => number;
+        public static implicit operator decimal(pyint number) => number;
 
         // 隐式转换为 PyNumber 从 long
-        public static implicit operator pyint(long value) => new pyint(value);
-        public static implicit operator pyint(int value) => new pyint(value);
-        public static implicit operator pyint(uint value) => new pyint(value);
-        public static implicit operator pyint(ulong value) => new pyint(value);
-        public static implicit operator pyint(byte value) => new pyint(value);
-        public static implicit operator pyint(bool value) => new pyint(value);
-        public static implicit operator pyint(char value) => new pyint(value);
-        public static implicit operator pyint(short value) => new pyint(value);
-        public static implicit operator pyint(ushort value) => new pyint(value);
+        public static implicit operator pyint(long value) => value;
+        public static implicit operator pyint(int value) => value;
+        public static implicit operator pyint(uint value) => value;
+        public static implicit operator pyint(ulong value) => value;
+        public static implicit operator pyint(byte value) => value;
+        public static implicit operator pyint(bool value) => value;
+        public static implicit operator pyint(char value) => value;
+        public static implicit operator pyint(short value) => value;
+        public static implicit operator pyint(ushort value) => value;
 
         // 隐式转换为 PyNumber 从 double
-        public static implicit operator pyint(double value) => new pyint(value);
-        public static implicit operator pyint(float value) => new pyint(value);
+        public static implicit operator pyint(double value) => value;
+        public static implicit operator pyint(float value) => value;
 
         #endregion
         
@@ -135,7 +146,7 @@ namespace SyntacticSugar
             // 测试除法
             pyint divResult1 = a / b;  // 5 / 3.14
             pyint divResult4 = a / 1.0;  // 5 / 3.14
-            pyint divResult2 = (a / 10.1); // 5 / 10
+            pyint divResult2 = Math.Round(a / 10.1f); // 5 / 10
             pyint divResult3 = 10 / b; // 10 / 3.14
 
             // 输出加法结果
@@ -155,7 +166,12 @@ namespace SyntacticSugar
             Console.WriteLine(mulResult1); // 输出：15.7
             Console.WriteLine(mulResult2); // 输出：50
             Console.WriteLine(mulResult3); // 输出：31.4
-
+            PyString s = "";
+            if (s == 1)
+            {
+                Console.WriteLine("Divide Results:");
+            }
+            s.split("", subResult1);
             // 输出除法结果
             Console.WriteLine("Divide Results:");
             Console.WriteLine(divResult1); // 输出：1.592356687898089
@@ -182,7 +198,7 @@ namespace SyntacticSugar
 
         public long __hash__()
         {
-            return _value;
+            return (long)_value;
         }
         public bool __eq__(pyint other)
         {

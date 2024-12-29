@@ -6,7 +6,7 @@ using System.Linq;
 namespace SyntacticSugar
 {
     // 可变集合 set
-    public class Pyfrozenset<T> : HashSet<T>
+    public class Pyfrozenset<T> : HashSet<T>, IPyObject
     {
         // 创建 set 类的构造函数
         public Pyfrozenset() : base()
@@ -95,6 +95,135 @@ namespace SyntacticSugar
         public Pyfrozenset<T> copy()
         {
             return new Pyfrozenset<T>(this);
+        }
+
+        // + 运算符：
+        public static Pyfrozenset<T> operator +(Pyfrozenset<T> a, Pyfrozenset<T> b)
+        {
+            return a.__add__(b);
+        }
+
+        // / 运算符：
+        public static Pyfrozenset<T> operator /(Pyfrozenset<T> a, Pyfrozenset<T> b)
+        {
+            return a.__mod__(b);
+        }
+
+        // - 运算符：
+        public static Pyfrozenset<T> operator -(Pyfrozenset<T> a, Pyfrozenset<T> b)
+        {
+            return a.__sub__(b);
+        }
+
+        // * 运算符：
+        public static Pyfrozenset<T> operator *(Pyfrozenset<T> a, Pyfrozenset<T> b)
+        {
+            return a.__mul__(b);
+        }
+
+        public void __init__(IPyObject o)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string __repr__()
+        {
+            throw new NotImplementedException();
+        }
+
+        public string __str__()
+        {
+            throw new NotImplementedException();
+        }
+
+        public long __hash__()
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool __eq__(IPyObject other)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool __ne__(IPyObject other)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool __lt__(IPyObject other)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool __le__(IPyObject other)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool __gt__(IPyObject other)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool __ge__(IPyObject other)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Pyfrozenset<T> __add__(Pyfrozenset<T> other)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Pyfrozenset<T> __sub__(Pyfrozenset<T> other)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Pyfrozenset<T> __mul__(Pyfrozenset<T> other)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Pyfrozenset<T> __truediv__(Pyfrozenset<T> other)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Pyfrozenset<T> __mod__(Pyfrozenset<T> other)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string __format__(string format)
+        {
+            throw new NotImplementedException();
+        }
+
+        public long __len__()
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool __contains__(IPyObject item)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void __setattr__(string name, IPyObject value)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void __delattr__(string name)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IPyObject __getattribute__(string name)
+        {
+            throw new NotImplementedException();
         }
     }
 
