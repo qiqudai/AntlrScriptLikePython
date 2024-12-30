@@ -51,10 +51,10 @@ section
     ;
     
 mfunc
-    : (SECTION_FUNCTION | PRIVATE_SECTION_FUNCTION) name parameters? ('->' test)? ']' NEWLINE + block
+    : (SECTION_FUNCTION | PRIVATE_SECTION_FUNCTION) name parameters ('->' test)? ']' NEWLINE + block
     ;
 masyncfunc
-    : (ASYNC_SECTION_FUNCTION | ASYNC_PRIVATE_SECTION_FUNCTION) name parameters? ('->' test)? ']' NEWLINE+ block
+    : (ASYNC_SECTION_FUNCTION | ASYNC_PRIVATE_SECTION_FUNCTION) name parameters ('->' test)? ']' NEWLINE+ block
     ;
 
 single_input
@@ -89,7 +89,7 @@ async_funcdef
     ;
 
 funcdef
-    : 'def' name parameters? ('->' test)? ':'? block
+    : 'def' name parameters ('->' test)? ':'? block
     ;
 
 parameters
@@ -131,8 +131,8 @@ vfpdef
     ;
 
 stmt
-    : simple_stmts
-    | compound_stmt
+    : compound_stmt
+    | simple_stmts
     ;
 
 simple_stmts
@@ -276,17 +276,16 @@ assert_stmt
     ;
 
 compound_stmt
-    : if_stmt
+    : funcdef
+    | classdef
+    | decorated
+    | async_stmt
     | while_stmt
     | for_stmt
     | try_stmt
     | with_stmt
     | match_stmt
-    
-    | funcdef
-    | classdef
-    | decorated
-    | async_stmt
+    | if_stmt
     ;
 
 async_stmt
@@ -294,29 +293,29 @@ async_stmt
     ;
 
 if_stmt
-    : 'if' test ':'? block ('elif' test ':'? block)* ('else' ':'? block)? { this.startCompound() }?
+    : 'if' test ':'? block ('elif' test ':'? block)* ('else' ':'? block)?
     ;
 
 while_stmt
-    : 'while' test ':'? block ('else' ':'? block)? { this.startCompound() }?
+    : 'while' test ':'? block ('else' ':'? block)?
     ;
 
 for_stmt
-    : 'for' exprlist 'in' testlist ':'? block ('else' ':'? block)? { this.startCompound() }?
+    : 'for' exprlist 'in' testlist ':'? block ('else' ':'? block)?
     ;
 
 try_stmt
     : (
         'try' ':'? block 
         (
-            (except_clause ':'? block)+ ('else' ':'? block)? ('finally' ':'? block)? { this.startCompound() }?
+            (except_clause ':'? block)+ ('else' ':'? block)? ('finally' ':'? block)?
             | 'finally' ':'? block
         )
     )
     ;
 
 with_stmt
-    : 'with' with_item (',' with_item)* ':'? block { this.startCompound() }?
+    : 'with' with_item (',' with_item)* ':'? block
     ;
 
 with_item
