@@ -1,18 +1,41 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
+using FastMember;
 
 namespace SyntacticSugar;
 
 public class Pytuple<T> : List<T>, IPyObject
 {
-    public Pytuple(): base()
+    public Pytuple()
     {
     }
-    public Pytuple(int capacity): base(capacity)
+    public Pytuple(Pytuple<T> t): base(t)
     {
+        
     }
 
-    public Pytuple(IEnumerable<T> collection) : base(collection)
+    public Pytuple(object tuple)
     {
+        if (tuple is ValueTuple)
+        {
+        }
+    }
+    // 构造函数：支持任意值元组初始化
+    public Pytuple(params T[] items)
+    {
+        if (items.Length > 0)
+        {
+            AddRange(items);
+        }
+    }
+    
+    public Pytuple(Pytuple<T> t, int start, int end)
+    {
+        if (start < 0 || end > t.Count || start > end)
+        {
+            throw new ArgumentOutOfRangeException("Invalid slice indices.");
+        }
+        AddRange(t.GetRange(start, end - start));
     }
 
     // 支持切片操作
@@ -22,11 +45,9 @@ public class Pytuple<T> : List<T>, IPyObject
         {
             if (start < 0) start += Count; // 支持负索引
             if (end < 0) end += Count;
+            if (end >= Count) end = Count - 1;
             if (start < 0 || end > Count || start > end) throw new ArgumentOutOfRangeException("Slice indices out of range");
-
-            var sliced = new Pytuple<T>();
-            for (int i = start; i < end; i++) sliced.Add(base[i]);
-            return sliced;
+            return new Pytuple<T>(this, start, end);
         }
     }
 
@@ -96,36 +117,6 @@ public class Pytuple<T> : List<T>, IPyObject
     public Pytuple<T> copy()
     {
         return new Pytuple<T>(this);
-    }
-    
-    public static void Test()
-    {
-        var li = new Pytuple<int> { 1, 2, 4, 3 };
-        //倒数
-        var a = li[^1];
-        //完整拷贝
-        var b = li[..];
-        // 相当于 Python 的 li[1:3]
-        var slice1 = li[1..3]; // 返回 [2, 4]
-
-        // 相当于 Python 的 li[2:]
-        var slice2 = li[2..]; // 返回 [4, 3]
-
-        // 相当于 Python 的 li[:3]
-        var slice3 = li[..3]; // 返回 [1, 2, 4]
-
-        // 相当于 Python 的 li[::2]
-        var slice4 = li[0, null, 2]; // 返回 [1, 4]
-
-        // 相当于 Python 的 li[::-1]
-        var slice5 = li[li.Count - 1, -1, -1]; // 返回 [3, 4, 2, 1]
-
-        Console.WriteLine($"Slice1: [{string.Join(", ", slice1)}]");
-        Console.WriteLine($"Slice2: [{string.Join(", ", slice2)}]");
-        Console.WriteLine($"Slice3: [{string.Join(", ", slice3)}]");
-        Console.WriteLine($"Slice4: [{string.Join(", ", slice4)}]");
-        Console.WriteLine($"Slice5: [{string.Join(", ", slice5)}]");
-        Console.WriteLine($"Slice5: [{string.Join(", ", b)}]");
     }
     
     // 方法示例（自动生成的方法）
@@ -271,4 +262,36 @@ public class Pytuple<T> : List<T>, IPyObject
     }
     
     
+    public static void Test()
+    {
+        tuple li = new ((1, 2, 4, 3, 5, 6, 7, 8, 98, 9, 2, 213, 213, 213, 1, 2, 4, 3, 5, 6, 7, 8, 98, 9, 2, 213, 213, 213,
+            1, 2, 4, 3, 5, 6, 7, 8, 98, 9, 2, 213, (1,23,4), 213));
+        var t1 = (1, 2, 3);
+        //倒数
+        var a = li[^1];
+        //完整拷贝
+        var b = li[..];
+        // 相当于 Python 的 li[1:3]
+        var slice1 = li[1..3]; // 返回 [2, 4]
+
+        // 相当于 Python 的 li[2:]
+        var slice2 = li[2..]; // 返回 [4, 3]
+
+        // 相当于 Python 的 li[:3]
+        var slice3 = li[..3]; // 返回 [1, 2, 4]
+
+        // 相当于 Python 的 li[::2]
+        var slice4 = li[0, null, 2]; // 返回 [1, 4]
+
+        // 相当于 Python 的 li[::-1]
+        var slice5 = li[li.Count - 1, -1, -1]; // 返回 [3, 4, 2, 1]
+
+        Console.WriteLine($"Slice1: [{string.Join(", ", slice1)}]");
+        Console.WriteLine($"Slice2: [{string.Join(", ", slice2)}]");
+        Console.WriteLine($"Slice3: [{string.Join(", ", slice3)}]");
+        Console.WriteLine($"Slice4: [{string.Join(", ", slice4)}]");
+        Console.WriteLine($"Slice5: [{string.Join(", ", slice5)}]");
+        Console.WriteLine($"Slice5: [{string.Join(", ", b)}]");
+    }
+
 }

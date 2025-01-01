@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Xml;
 using Antlr4.Runtime.Tree;
+using SyntacticSugar;
 
 namespace CodeTransfer
 {
@@ -9,7 +10,13 @@ namespace CodeTransfer
     class PythonToCSharpConverter : Python3ParserBaseVisitor<string>
     {
         private StringBuilder _csharpCode = new StringBuilder();
-
+        private string noExceptionName = "noException";
+        private bool noExceptionCreated = false;
+        private bool openVarCheck = false;
+        private string leftVarType = ""; 
+        //var list
+        private Dictionary<string, string> func_var_dict = new();
+        private Dictionary<string, string> class_var_dict = new();
         public string GetCSharpCode() => _csharpCode.ToString();
 
         private int _indentLevel = 0;
@@ -18,8 +25,22 @@ namespace CodeTransfer
 
         private void Dedent() => _indentLevel--;
 
+        private void NewFuncBegin()
+        {
+            func_var_dict.Clear();
+            noExceptionCreated = false;
+        }
+        private void NewClassBegin()
+        {
+            class_var_dict.Clear();
+            NewFuncBegin();
+        }
         public string Translate()
         {
+            pyint d;
+            pyint c;
+            pyint b;
+            pyint a = b = (c = (d = 2 > 3 ? 3 : 4));
             return _csharpCode.ToString();
         }
 
@@ -36,6 +57,31 @@ namespace CodeTransfer
             _csharpCode.AppendLine(new string(' ', _indentLevel * 4) + body);
             Dedent();
             _csharpCode.AppendLine(new string(' ', _indentLevel * 4) + "}");
+        }
+
+        private string MakeLine(string line)
+        {
+            return new string(' ', _indentLevel * 4) + line;
+        }
+
+        private string MakeSpace()
+        {
+            return new string(' ', _indentLevel * 4);
+        }
+        private string MakeNewLine()
+        {
+            return '\n' + new string(' ', _indentLevel * 4) ;
+        }
+        private string MakeLineBody(string line, string body)
+        {
+            StringBuilder _Code = new StringBuilder();
+            _Code.AppendLine(new string(' ', _indentLevel * 4) + line);
+            _Code.AppendLine(new string(' ', _indentLevel * 4) + "{");
+            Indent();
+            _Code.AppendLine(new string(' ', _indentLevel * 4) + body);
+            Dedent();
+            _Code.AppendLine(new string(' ', _indentLevel * 4) + "}");
+            return _Code.ToString();
         }
 
         public override string VisitFile_input(Python3Parser.File_inputContext context)
@@ -56,10 +102,10 @@ namespace CodeTransfer
                         var tokenType = terminalNode.Symbol.Type;
             
                         // 如果是 NEWLINE（换行符）
-                        if (tokenType == Python3Parser.NEWLINE)
-                        {
-                            AppendLine("");
-                        }
+                        // if (tokenType == Python3Parser.NEWLINE)
+                        // {
+                        //     AppendLine("");
+                        // }
 
                         break;
                     }
@@ -71,6 +117,7 @@ namespace CodeTransfer
 
         public override string VisitFuncdef(Python3Parser.FuncdefContext context)
         {
+            NewFuncBegin();
             // 获取函数名
             var functionName = context.name().GetText();
             // 处理参数列表 (如果存在)
@@ -79,18 +126,13 @@ namespace CodeTransfer
             var returnType = context.test() != null ? Visit(context.test()) : "void";
             // 获取函数体内容
             var functionBody = VisitBlock(context.block());
-            AppendLineBody($"public {returnType} {functionName}{parameters}", functionBody);
-            return "";
+            return MakeLineBody($"public {returnType} {functionName}{parameters}", functionBody);
         }
+
 
         public override string VisitParameters(Python3Parser.ParametersContext context)
         {
-            if (context.typedargslist() != null)
-            {
-                return Visit(context.typedargslist());
-            }
-
-            return string.Empty;
+            return context.typedargslist() != null ? Visit(context.typedargslist()) : "()";
         }
 
         public override string VisitTypedargslist(Python3Parser.TypedargslistContext context)
@@ -102,69 +144,86 @@ namespace CodeTransfer
                 parameters.Add($"object {parameterName}");
             }
 
-            return string.Join(", ", parameters);
+            return '(' + string.Join(", ", parameters) + ')';
         }
 
         public override string VisitExpr_stmt(Python3Parser.Expr_stmtContext context)
         {
-            return VisitChildren(context);
+            openVarCheck = context.testlist_star_expr().Length > 1;
+            string left = Visit(context.testlist_star_expr(0));
+            // 检查是否有 annassign, augassign 或普通赋值
+            if (context.annassign() != null)
+            {
+                return left + VisitAnnassign(context.annassign());
+            }
+
+            leftVarType = "PyVariable ";
+            // 普通兼容的运算符
+            if (context.augassign() == null)
+            {
+                var exprs = context.testlist_star_expr().Skip(1).Select(Visit) // 先映射每个 name
+                    .ToArray(); // 转换为数组（string[]）
+                openVarCheck = false;
+
+                return (exprs.Length > 0 ? (leftVarType + left + " = ") : left) +
+                       MakeLine(string.Join(" = ", exprs));
+            }
+
+            string right = context.testlist() != null
+                ? Visit(context.testlist())
+                : Visit(context.yield_expr(0));
+
+            string operatorCode = Visit(context.augassign());
+            // 处理需要替换占位符的情况，例如 "**=" 或 "//="
+            if (operatorCode.Contains("{0}") && operatorCode.Contains("{1}"))
+                return string.Format(operatorCode, left, right);
+            return $"{left} {operatorCode} {right};";
+            // 如果没有赋值操作，则认为这是一个简单的表达式语句
         }
 
         public override string VisitTestlist_star_expr(Python3Parser.Testlist_star_exprContext context)
         {
-            return VisitChildren(context);
+            // 遍历子表达式
+            // 获取所有 test 或 star_expr 并用逗号连接
+            var items = context.children.Where(c => c is Python3Parser.TestContext or Python3Parser.Star_exprContext)
+                .Select(c => c is Python3Parser.TestContext t ? VisitTest(t) : VisitStar_expr((Python3Parser.Star_exprContext)c));
+            return string.Join(", ", items);
         }
 
         public override string VisitBlock(Python3Parser.BlockContext context)
         {
-            return string.Join("\n", context.stmt().Select(Visit));
+            return string.Join(MakeNewLine(), context.stmt().Select(Visit));
         }
 
         public override string VisitIf_stmt(Python3Parser.If_stmtContext context)
         {
-            var result = new StringBuilder();
-
             // 获取 "if" 条件表达式
+            StringBuilder sb = new StringBuilder();
             var condition = Visit(context.test(0)); // 获取第一个 test（即 if 条件）
-
             // 获取对应的代码块
             var block = Visit(context.block(0)); // 获取第一个 block（即 if 语句体）
-
             // 生成 C# 代码的 if 部分
-            result.AppendLine($"if ({condition})");
-            result.AppendLine("{");
-            result.AppendLine(block);
-            result.AppendLine("}");
+            sb.Append(MakeLineBody($"if ({condition})", block));
 
             // 遍历处理 "elif" 部分
-            for (int i = 1; i < context.test().Count(); i++)  // 从第2个 test（即 elif 条件）开始遍历
+            for (int i = 1; i < context.test().Count(); i++) // 从第2个 test（即 elif 条件）开始遍历
             {
-                var elifCondition = Visit(context.test(i));  // 获取 elif 条件
-                var elifBlock = Visit(context.block(i));  // 获取 elif 语句体
-
-                result.AppendLine($"else if ({elifCondition})");
-                result.AppendLine("{");
-                result.AppendLine(elifBlock);
-                result.AppendLine("}");
+                var elifCondition = Visit(context.test(i)); // 获取 elif 条件
+                var elifBlock = Visit(context.block(i)); // 获取 elif 语句体
+                sb.Append(MakeLineBody($"else if ({elifCondition})", elifBlock));
             }
 
             // 处理 "else" 部分（如果存在）
-            if (context.block().Count() > context.test().Count())
-            {
-                var elseBlock = Visit(context.block(context.test().Count()));  // 获取 else 语句体
-                result.AppendLine("else");
-                result.AppendLine("{");
-                result.AppendLine(elseBlock);
-                result.AppendLine("}");
-            }
-
-            return result.ToString();
+            if (context.block().Count() <= context.test().Count()) return string.Empty;
+            var elseBlock = Visit(context.block(context.test().Count())); // 获取 else 语句体
+            sb.Append(MakeLineBody($"else", elseBlock));
+            return sb.ToString();
         }
 
         public override string VisitWhile_stmt(Python3Parser.While_stmtContext context)
-        {// 获取条件表达式 (test)
+        {
+            // 获取条件表达式 (test)
             var condition = Visit(context.test());
-
             // 获取 while 块 (block)
             var whileBlock = VisitBlock(context.block(0));
 
@@ -179,29 +238,85 @@ namespace CodeTransfer
                 whileBlock = $"bool {noBreakFlag} = true;\n{whileBlock.Replace("break;", $"{noBreakFlag} = false; break;")}";
 
                 // 构建 else 子句
-                elseClause = $"if ({noBreakFlag}) {{ {VisitBlock(context.block(1))} }}";
+                elseClause = MakeLine($"if ({noBreakFlag}) {{ {VisitBlock(context.block(1))} }}");
             }
 
-            // 构建完整的 while 语句
-            var whileStatement = $@"
-while ({condition})
-{{
-    {whileBlock}
-}}
-{elseClause}";
-
-            return whileStatement;
+            return MakeLineBody($"while ({condition})", whileBlock) + elseClause;
         }
 
         public override string VisitReturn_stmt(Python3Parser.Return_stmtContext context)
         {
-            var value = Visit(context.testlist());
-            return $"return {value};";
+            return MakeLine($"return {Visit(context.testlist())}");
         }
 
         public override string VisitAtom(Python3Parser.AtomContext context)
         {
-            return context.GetText();
+            if (context.yield_expr() != null)
+                return Visit(context.yield_expr());
+            
+            if (context.testlist_comp() != null)
+            {
+                if (context.GetText().StartsWith("(")) // 元组
+                {
+                    leftVarType = "tuple ";
+                    return $"new[] {{ {Visit(context.testlist_comp())} }}";
+                }
+
+                if (context.GetText().StartsWith("[")) // 列表
+                {
+                    leftVarType = "list ";
+                    return $"new[] {{ {Visit(context.testlist_comp())} }}";
+                }
+            }
+
+            if (context.dictorsetmaker() != null) // 字典或集合
+            {
+                leftVarType = "dict ";
+                return $"new {{ {Visit(context.dictorsetmaker())} }}";
+            }
+
+            if (context.name() != null) // 变量名
+                return context.name().GetText();
+
+            if (context.NUMBER() != null) // 数字字面量
+            {
+                leftVarType = "pyint ";
+                return context.NUMBER().GetText();
+            }
+
+            if (context.STRING() != null && context.STRING().Length > 0) // 字符串
+            {
+                return '"' + string.Concat(context.STRING().Select(s =>
+                {
+                    // 获取文本并处理单引号字符串
+                    string text = s.GetText();
+                    if (text.StartsWith("'") && text.EndsWith("'"))
+                    {
+                        // 将单引号转换为双引号，并对内部的双引号进行转义
+                        text = text.Trim('\'');
+                    }
+                    else if (text.StartsWith("\"") && text.EndsWith("\""))
+                    {
+                        // 已经是双引号的字符串，转义内部的双引号
+                        text = text.Trim('"');
+                    }
+                    return text;
+                })) + '"';
+            }
+
+            if (context.GetText() == "None") // Python 的 None
+            {
+                leftVarType = "pystring ";
+                return "null";
+            }
+
+            if (context.GetText() == "True" || context.GetText() == "False") // 布尔值
+            {
+                leftVarType = "pyint ";
+                return context.GetText().ToLower();
+            }
+
+            return context.GetText(); // 其他内容
         }
 
 
@@ -211,41 +326,36 @@ while ({condition})
             // 提取表达式体
             var body = Visit(context.test());
             // 构建 C# lambda 表达式
-            return $"{(string.IsNullOrEmpty(parameters) ? "" : $"({parameters})")} => {body}";
+            return MakeLine($"{(string.IsNullOrEmpty(parameters) ? "" : $"({parameters})")} => {body}");
         }
-
-
-
-
         //AI添加2
-
-        public virtual string VisitSingle_input([NotNull] Python3Parser.Single_inputContext context)
+        public override string VisitSingle_input([NotNull] Python3Parser.Single_inputContext context)
         {
             // You can implement this method if you need specific logic for single input statements.
             // As per the current pattern, returning VisitChildren seems appropriate for handling standard parsing.
             return  VisitChildren(context);
         }
 
-        public virtual string VisitDecorator([NotNull] Python3Parser.DecoratorContext context)
+        public override string VisitDecorator([NotNull] Python3Parser.DecoratorContext context)
         {
             // Decorators are often used in front of functions or methods. 
             // You could handle decorators here if needed.
             return VisitChildren(context);
         }
 
-        public virtual string VisitDecorators([NotNull] Python3Parser.DecoratorsContext context)
+        public override string VisitDecorators([NotNull] Python3Parser.DecoratorsContext context)
         {
             // This handles multiple decorators. Typically, decorators are visited in a list.
             return VisitChildren(context);
         }
 
-        public virtual string VisitDecorated([NotNull] Python3Parser.DecoratedContext context)
+        public override string VisitDecorated([NotNull] Python3Parser.DecoratedContext context)
         {
             // A decorated function or method. This can be processed by visiting the decorated node itself.
             return VisitChildren(context);
         }
 
-        public virtual string VisitTfpdef([NotNull] Python3Parser.TfpdefContext context)
+        public override string VisitTfpdef([NotNull] Python3Parser.TfpdefContext context)
         {
             // A target function parameter definition, usually specifying type annotations.
             // In many cases, it could be a simple parameter without much processing. 
@@ -327,10 +437,9 @@ while ({condition})
 
         public override string VisitSimple_stmts([NotNull] Python3Parser.Simple_stmtsContext context)
         {
-            var statements = context.simple_stmt().Select(Visit).ToList();
-            AppendLine(string.Join(";", statements));
+            var statements = context.simple_stmt().Select(stmt => $"{Visit(stmt)};");
             // 用分号连接每个简单语句
-            return null;
+            return MakeLine(string.Concat(statements));
         }
         
         public override string VisitSimple_stmt([NotNull] Python3Parser.Simple_stmtContext context)
@@ -347,25 +456,44 @@ while ({condition})
             {
                 result += " = " + Visit(context.test(1));  // Visit the assigned value (second test).
             }
-            return result;
+            return MakeLine(result);
         }
 
         public override string VisitAugassign([NotNull] Python3Parser.AugassignContext context)
         {
-            return null;
+            string operatorSymbol = context.GetText();
+
+            // 生成兼容的 C# 代码
+            return operatorSymbol switch
+            {
+                "+=" => "+=",
+                "-=" => "-=",
+                "*=" => "*=",
+                "/=" => "/=",
+                "%=" => "%=",
+                "&=" => "&=",
+                "|=" => "|=",
+                "^=" => "^=",
+                "<<=" => "<<=",
+                ">>=" => ">>=",
+                "**=" => " = Math.Pow({0}, {1});", // 替代幂运算
+                "//=" => " = (long)({0} / {1});",  // 替代整除
+                "@=" => " = CustomMatrixOperation({0}, {1});", // 自定义矩阵运算
+                _ => throw new NotSupportedException($"Unsupported operator: {operatorSymbol}")
+            };
         }
 
         public override string VisitDel_stmt([NotNull] Python3Parser.Del_stmtContext context)
         {
             // Handle delete statement.
             var target = Visit(context.exprlist());
-            return $"delete {target};";
+            return MakeLine($"delete {target};");
         }
 
         public override string VisitPass_stmt([NotNull] Python3Parser.Pass_stmtContext context)
         {
             // Handle pass statement (no-op).
-            return ";";
+            return MakeLine(";");
         }
 
         public override string VisitFlow_stmt([NotNull] Python3Parser.Flow_stmtContext context)
@@ -376,27 +504,27 @@ while ({condition})
         public override string VisitBreak_stmt([NotNull] Python3Parser.Break_stmtContext context)
         {
             // Handle break statement.
-            return "break;";
+            return MakeLine("break;");
         }
 
         public override string VisitContinue_stmt([NotNull] Python3Parser.Continue_stmtContext context)
         {
             // Handle the continue statement.
-            return "continue;";
+            return MakeLine("continue;");
         }
 
         public override string VisitYield_stmt([NotNull] Python3Parser.Yield_stmtContext context)
         {
             // Handle the yield statement.
             var value = Visit(context.GetChild(0));
-            return $"yield {value};";
+            return MakeLine($"yield {value};");
         }
 
         public override string VisitRaise_stmt([NotNull] Python3Parser.Raise_stmtContext context)
         {
             // Handle the raise statement.
             var exception = context.test() != null ? Visit(context.FROM()) : string.Empty;
-            return $"raise {exception};";
+            return MakeLine($"raise {exception};");
         }
 
         public override string VisitImport_stmt([NotNull] Python3Parser.Import_stmtContext context)
@@ -409,7 +537,7 @@ while ({condition})
         {
             // Handle the import name.
             var name = Visit(context.dotted_as_names());
-            return $"import {name};";
+            return MakeLine($"import {name};");
         }
 
         public override string VisitImport_from([NotNull] Python3Parser.Import_fromContext context)
@@ -417,7 +545,7 @@ while ({condition})
             // Handle the 'from ... import ...' statement.
             var module = Visit(context.dotted_name());
             var names = Visit(context.import_as_names());
-            return $"from {module} import {names};";
+            return MakeLine($"from {module} import {names};");
         }
 
         public override string VisitImport_as_name([NotNull] Python3Parser.Import_as_nameContext context)
@@ -425,7 +553,7 @@ while ({condition})
             // Handle the 'import ... as ...' part of an import statement.
             var name = context.name().GetValue(0).ToString();
             var alias = context.name(1).GetText();
-            return $"{name} as {alias}";
+            return MakeLine($"{name} as {alias}");
         }
 
         public override string VisitDotted_as_name([NotNull] Python3Parser.Dotted_as_nameContext context)
@@ -437,7 +565,7 @@ while ({condition})
             if (context.name() == null) return dottedName;
             // 如果有 'as' 子句，则返回 using 别名指令
             var alias = Visit(context.name());
-            return $"using {alias} = {dottedName};";
+            return MakeLine($"using {alias} = {dottedName};");
 
             // 如果没有 'as' 子句，则直接返回点分名称
         }
@@ -445,31 +573,26 @@ while ({condition})
         public override string VisitImport_as_names([NotNull] Python3Parser.Import_as_namesContext context)
         {
             // Handle the import as names list.
-            var result = new StringBuilder();
-            foreach (var name in context.import_as_name())
-            {
-                result.Append(Visit(name) + ", ");
-            }
+            var names = context.import_as_name()
+                .Select(Visit)  // 先映射每个 name
+                .ToArray();  // 转换为数组（string[]）
 
-            return result.ToString().TrimEnd(',', ' ');
+            return MakeLine(string.Join(", ", names));  // 使用 string.Join 连接所有的 name
         }
 
         public override string VisitDotted_as_names([NotNull] Python3Parser.Dotted_as_namesContext context)
         {
-            // Handle multiple dotted names with aliases.
-            var result = new StringBuilder();
-            foreach (var name in context.dotted_as_name())
-            {
-                result.Append(Visit(name) + ", ");
-            }
-
-            return result.ToString().TrimEnd(',', ' ');
+            // Handle the import as names list.
+            var names = context.dotted_as_name()
+                .Select(Visit)  // 先映射每个 name
+                .ToArray();  // 转换为数组（string[]）
+            return MakeLine(string.Join(", ", names));  // 使用 string.Join 连接所有的 name
         }
 
         public override string VisitDotted_name([NotNull] Python3Parser.Dotted_nameContext context)
         {
             // Handle dotted names (e.g., module.submodule).
-            return string.Join(".", context.name().Select(n => n.GetText()));
+            return MakeLine(string.Join(".", context.name().Select(n => n.GetText())));
         }
 
         public override string VisitAssert_stmt([NotNull] Python3Parser.Assert_stmtContext context)
@@ -491,70 +614,18 @@ while ({condition})
                 !string.IsNullOrEmpty(errorMessage) ? $"System.Diagnostics.Debug.Assert({condition}, {errorMessage});" :
                 // 如果没有错误消息，只传递条件
                 $"System.Diagnostics.Debug.Assert({condition});";
-            return assertStatement;
+            return MakeLine(assertStatement);
         }
 
         public override string VisitCompound_stmt([NotNull] Python3Parser.Compound_stmtContext context)
         {
-            // 如果是 if 语句
-            if (context.if_stmt() != null)
-            {
-                return VisitIf_stmt(context.if_stmt());
-            }
-            // 如果是 while 语句
-            if (context.while_stmt() != null)
-            {
-                return VisitWhile_stmt(context.while_stmt());
-            }
-            // 如果是 for 语句
-            if (context.for_stmt() != null)
-            {
-                return VisitFor_stmt(context.for_stmt());
-            }
-            // 如果是 try 语句
-            if (context.try_stmt() != null)
-            {
-                return VisitTry_stmt(context.try_stmt());
-            }
-            // 如果是 with 语句
-            if (context.with_stmt() != null)
-            {
-                return VisitWith_stmt(context.with_stmt());
-            }
-            // 如果是 match 语句
-            if (context.match_stmt() != null)
-            {
-                return VisitMatch_stmt(context.match_stmt());
-            }
-            // 如果是函数定义
-            if (context.funcdef() != null)
-            {
-                return VisitFuncdef(context.funcdef());
-            }
-            // 如果是类定义
-            if (context.classdef() != null)
-            {
-                return VisitClassdef(context.classdef());
-            }
-            // 如果是装饰器
-            if (context.decorated() != null)
-            {
-                return VisitDecorated(context.decorated());
-            }
-            // 如果是异步语句
-            if (context.async_stmt() != null)
-            {
-                return VisitAsync_stmt(context.async_stmt());
-            }
-    
-            // 如果没有匹配到任何语句，返回空字符串或其他默认值
-            return string.Empty;
+            return VisitChildren(context);
         }
 
         public override string VisitAsync_stmt([NotNull] Python3Parser.Async_stmtContext context)
         {
             // Handle the async statement. If there is any specific syntax for `async`, you can add it here.
-            return "async " + VisitChildren(context); // You can customize the visit for async statements as needed.
+            return MakeLine("async " + VisitChildren(context)); // You can customize the visit for async statements as needed.
         }
 
         public override string VisitFor_stmt([NotNull] Python3Parser.For_stmtContext context)
@@ -606,41 +677,36 @@ foreach (var {targets} in ({iterable}))
 }}
 {elseClause}";
             }
-
             return forStatement;
         }
 
         public override string VisitTry_stmt([NotNull] Python3Parser.Try_stmtContext context)
         {
-            // 获取 try 块
-            var tryBlock = VisitBlock(context.block(0));
+            var sb = new StringBuilder();
+            if (!noExceptionCreated && context.block().Length > context.except_clause().Length + 1 &&
+                context.except_clause().Length > 0)
+            {
+                sb.Append(MakeLine($"bool {noExceptionName} = true;"));
+                noExceptionCreated = true;
+            }
 
-            // 初始化 catch 和 finally 块
-            var catchBlocks = new List<string>();
-            string elseBlock = "";
+            sb.Append(MakeLineBody("try", VisitBlock(context.block(0)) + MakeLine($"{noExceptionName} = true;")));
+
             string finallyBlock = "";
-
-            // 使用布尔标志来控制是否进入 else 子句
-            string noExceptionFlag = "noException";
-
             // 检查是否有 except 子句
             if (context.except_clause().Length > 0)
             {
-                for (int i = 0; i < context.except_clause().Length; i++)
+                var clause = context.except_clause();
+                for (var i = 0; i < clause.Length; i++)
                 {
-                    var exceptClause = context.except_clause(i);
-                    var catchBlock = VisitBlock(context.block(i + 1)); // except 子句后的块
-                    catchBlocks.Add(VisitExcept_clause(exceptClause));
-                }
-
-                // 检查是否有 else 子句
-                if (context.block().Length > context.except_clause().Length + 1)
-                {
-                    elseBlock = $"if ({noExceptionFlag}) {{ {VisitBlock(context.block(context.except_clause().Length + 1))} }}";
+                    var exceptClause = clause[i];
+                    sb.AppendLine(MakeLineBody("catch (Exception ex)", Visit(context.block(i))));
+                    noExceptionCreated = true; // 标记为捕获异常
                 }
 
                 // 检查是否有 finally 子句
-                if (context.FINALLY() != null && context.block().Length > context.except_clause().Length + (context.block().Length > context.except_clause().Length + 1 ? 2 : 1))
+                if (context.FINALLY() != null && context.block().Length > context.except_clause().Length +
+                    (context.block().Length > context.except_clause().Length + 1 ? 2 : 1))
                 {
                     finallyBlock = $"finally {{ {VisitBlock(context.block(context.block().Length - 1))} }}";
                 }
@@ -650,19 +716,18 @@ foreach (var {targets} in ({iterable}))
                 // 如果只有 finally 子句
                 finallyBlock = $"finally {{ {VisitBlock(context.block(1))} }}";
             }
+            if (!string.IsNullOrEmpty(finallyBlock))
+                sb.Append(MakeLine(finallyBlock));
 
-            // 构建完整的 try-catch-finally 语句
-            var tryStatement = $@"
-bool {noExceptionFlag} = true;
-try 
-{{ 
-    {tryBlock}
-}}
-{string.Join("\n", catchBlocks)}
-{finallyBlock}
-{elseBlock}";
-
-            return tryStatement;
+            // 检查是否有 else 子句
+            if (context.block().Length > context.except_clause().Length + 1)
+            {
+                var elseBlock =
+                    $"if ({noExceptionName}) {{ {VisitBlock(context.block(context.except_clause().Length + 1))} }}";
+                if (!string.IsNullOrEmpty(elseBlock))
+                    sb.Append(MakeLine(elseBlock));
+            }
+            return sb.ToString();
         }
 
         public override string VisitWith_stmt([NotNull] Python3Parser.With_stmtContext context)
@@ -676,15 +741,11 @@ try
             {
                 usings.Add(VisitWith_item(item));
             }
-
             // 获取 block 内容
             var blockContent = VisitBlock(context.block());
-
             // 构建完整的 using 语句
             var usingStatement = string.Join("\n", usings.Select(u => $"using ({u})"));
-            usingStatement += $"\n{{\n{blockContent}\n}}";
-
-            return usingStatement;
+            return MakeLineBody(usingStatement, blockContent);;
         }
 
         public override string VisitWith_item([NotNull] Python3Parser.With_itemContext context)
@@ -698,38 +759,32 @@ try
                 var asExpr = Visit(context.expr());
                 return $"{test} as {asExpr}";
             }
-            else
-            {
-                // 如果没有 'as' 子句，则直接使用表达式
-                return test;
-            }
-        }
 
+            // 如果没有 'as' 子句，则直接使用表达式
+            return test;
+        }
         public override string VisitExcept_clause([NotNull] Python3Parser.Except_clauseContext context)
         {
-            // 如果存在 test (即指定的异常类型)，则处理它
-            if (context.test() != null)
-            {
-                // 获取异常类型名称
-                var exceptionType = VisitTest(context.test());
+            var result = "catch";
 
-                // 如果存在 'as' name，则获取异常变量名称
-                if (context.name() != null)
-                {
-                    var exceptionVariable = context.name().GetText();
-                    return $"catch ({exceptionType} {exceptionVariable})";
-                }
-                else
-                {
-                    // 如果没有 'as' name，则只指定异常类型
-                    return $"catch ({exceptionType})";
-                }
-            }
-            else
+            // 如果没有异常类型
+            if (context.test() == null)
             {
-                // 如果没有指定异常类型，则是默认的 except 子句
-                return "catch"; // 或者根据上下文决定是否提供更具体的 catch 块
+                return result + "\n{}";  // 捕获所有异常，并加上空代码块
             }
+
+            // 如果有异常类型
+            result += " (" + Visit(context.test()) + ")";
+
+            // 如果有 `as` 子句
+            if (context.name() != null)
+            {
+                result += " " + context.name().GetText(); // 异常变量名
+            }
+
+            result += "\n{}"; // 添加代码块大括号
+
+            return result;
         }
 
         public override string VisitMatch_stmt([NotNull] Python3Parser.Match_stmtContext context)
@@ -788,7 +843,6 @@ try
             if (context.expr() != null)
             {
                 var exprText = VisitExpr(context.expr());
-
                 // 对于解包表达式的处理逻辑
                 // 注意: C# 没有直接的解包操作符，需要根据上下文进行特殊处理
                 return $"Unpack({exprText});";
@@ -1105,25 +1159,14 @@ try
 
         public override string VisitTest([NotNull] Python3Parser.TestContext context)
         {
-            // 如果有三目运算符结构，则进行特殊处理
-            if (context.or_test().Length > 1 && context.QUEST() != null && context.COLON() != null)
-            {
-                var condition = Visit(context.or_test(0));
-                var trueValue = Visit(context.or_test(1));
-                var falseValue = Visit(context.test());
+            if (context.IF() == null) return Visit(context.or_test(0)); // 递归解析 or_test
+            // Python 的三元表达式 "x if cond else y" 转为 C# 三元表达式 "cond ? x : y"
+            var condition = Visit(context.or_test(0));
+            var trueExpr = Visit(context.or_test(1));
+            var falseExpr = Visit(context.test());
 
-                return $"{condition} ? {trueValue} : {falseValue}";
-            }
-            else if (context.lambdef() != null)
-            {
-                // 处理 lambda 表达式的情况
-                return Visit(context.lambdef());
-            }
-            else
-            {
-                // 对于非三目运算符的情况，直接访问 or_test
-                return Visit(context.or_test(0));
-            }
+            return $"{condition} ? {trueExpr} : {falseExpr}";
+
         }
 
         public override string VisitTest_nocond([NotNull] Python3Parser.Test_nocondContext context)
@@ -1204,11 +1247,65 @@ try
 
         public override string VisitStar_expr([NotNull] Python3Parser.Star_exprContext context)
         {
-            return $"*{Visit(context.expr())}"; // Return the star expression.
+            // 解析表达式部分
+            var expr = Visit(context.expr());
+
+            return context.Parent switch
+            {
+                // 判断上下文类型并生成代码
+                // 函数参数解包
+                Python3Parser.ArglistContext => $"new object[] {{ {expr} }}",
+                // 赋值解包
+                Python3Parser.Expr_stmtContext => $@"
+var temp = {expr};
+var first = temp[0];
+var rest = temp.Skip(1).ToList();",
+                _ => $"new List<object> {{ {expr} }}"
+            };
+        }
+        private void IsValidLeftValue([NotNull] Python3Parser.ExprContext context)
+        {
+            if (!openVarCheck) return;
+            // 检查是否为原子表达式
+            if (context.atom_expr() == null) return;
+            var atomExpr = context.atom_expr();
+            var atom = atomExpr.atom();
+
+            // 检查是否为简单的名称（变量）
+            if (atom.name() != null)
+            {
+                func_var_dict.TryAdd(atom.name().GetText(), "");
+                return;
+            }
+
+            if (atomExpr.atom().testlist_comp() != null)
+            {
+                IsValidTestListForAssignment(atomExpr.atom().testlist_comp());
+            }
+        }
+
+// 辅助方法：检查 testlist 是否适合用于赋值
+        private void IsValidTestListForAssignment([NotNull] Python3Parser.Testlist_compContext context)
+        {
+            // 检查每个子项是否是有效的左值
+            foreach (var child in context.children)
+            {
+                switch (child)
+                {
+                    case Python3Parser.TestContext testCtx:
+                        VisitChildren(testCtx);
+                        break;
+                    case Python3Parser.Star_exprContext starExprCtx:
+                        // 星号表达式也允许出现在左侧（扩展解包赋值）
+                        IsValidLeftValue(starExprCtx.expr());
+                        break;
+                }
+            }
         }
 
         public override string VisitExpr([NotNull] Python3Parser.ExprContext context)
         {
+            IsValidLeftValue(context);
             // 处理原子表达式（如常量、变量等）
             if (context.atom_expr() != null)
             {
@@ -1220,9 +1317,8 @@ try
             {
                 var left = Visit(context.expr(0));
                 var right = Visit(context.expr(1));
-                return $"{left} ** {right}";
+                return $"Math.Pow({left}, {right})";
             }
-
             // 处理一元运算符（'+'、'-'、'~'）
             if (context.expr().Length == 1 && context.GetChild(0).GetText() == "+" ||
                 context.GetChild(0).GetText() == "-" || context.GetChild(0).GetText() == "~")
@@ -1233,83 +1329,42 @@ try
             }
 
             // 处理乘除法运算符（'*'、'@'、'/'、'%'）
-            if (context.expr().Length == 2 && (context.GetChild(1).GetText() == "*" ||
-                                               context.GetChild(1).GetText() == "@" ||
-                                               context.GetChild(1).GetText() == "/" ||
-                                               context.GetChild(1).GetText() == "%" ||
-                                               context.GetChild(1).GetText() == "/."))
+            if (context.expr().Length == 2)
             {
                 var left = Visit(context.expr(0));
                 var op = context.GetChild(1).GetText();
                 var right = Visit(context.expr(1));
                 return $"{left} {op} {right}";
             }
+            
 
-            // 处理加减法运算符（'+'、'-'）
-            if (context.expr().Length == 2 &&
-                (context.GetChild(1).GetText() == "+" || context.GetChild(1).GetText() == "-"))
-            {
-                var left = Visit(context.expr(0));
-                var op = context.GetChild(1).GetText();
-                var right = Visit(context.expr(1));
-                return $"{left} {op} {right}";
-            }
-
-            // 处理位移运算符（'<<'、'>>'）
-            if (context.expr().Length == 2 &&
-                (context.GetChild(1).GetText() == "<<" || context.GetChild(1).GetText() == ">>"))
-            {
-                var left = Visit(context.expr(0));
-                var op = context.GetChild(1).GetText();
-                var right = Visit(context.expr(1));
-                return $"{left} {op} {right}";
-            }
-
-            // 处理位与运算符（'&'）
-            if (context.expr().Length == 2 && context.GetChild(1).GetText() == "&")
-            {
-                var left = Visit(context.expr(0));
-                var right = Visit(context.expr(1));
-                return $"{left} & {right}";
-            }
-
-            // 处理位异或运算符（'^'）
-            if (context.expr().Length == 2 && context.GetChild(1).GetText() == "^")
-            {
-                var left = Visit(context.expr(0));
-                var right = Visit(context.expr(1));
-                return $"{left} ^ {right}";
-            }
-
-            // 处理位或运算符（'|'）
-            if (context.expr().Length == 2 && context.GetChild(1).GetText() == "|")
-            {
-                var left = Visit(context.expr(0));
-                var right = Visit(context.expr(1));
-                return $"{left} | {right}";
-            }
-
-            // 处理后缀自增（i++）
-            if (context.INCREMENT() != null && context.expr().Length == 1)
-            {
-                var operand = Visit(context.expr(0));
-                return $"{operand}++";
-            }
-
-            // 处理前缀自增（++i）
-            if (context.INCREMENT() != null && context.expr().Length == 1 && context.GetChild(0).GetText() == "++")
-            {
-                var operand = Visit(context.expr(0));
-                return $"++{operand}";
-            }
+            // // 处理后缀自增（i++）
+            // if (context.INCREMENT() != null && context.expr().Length == 1)
+            // {
+            //     var operand = Visit(context.expr(0));
+            //     return $"{operand}++";
+            // }
+            //
+            // // 处理前缀自增（++i）
+            // if (context.INCREMENT() != null && context.expr().Length == 1 && context.GetChild(0).GetText() == "++")
+            // {
+            //     var operand = Visit(context.expr(0));
+            //     return $"++{operand}";
+            // }
 
             return string.Empty;
         }
 
         public override string VisitAtom_expr([NotNull] Python3Parser.Atom_exprContext context)
         {
-            // Handle atom expressions (e.g., literals, variables, or grouped expressions).
-            return Visit(context.atom()); // Visit the atom expression (which may be a literal or variable).
+            var atom = Visit(context.atom());
+            var trailers = context.trailer()?.Select(Visit) ?? [];
+
+            // 如果有 AWAIT 前缀
+            var awaitPrefix = context.AWAIT() != null ? "await " : "";
+
+            // 拼接 atom 和 trailer
+            return $"{awaitPrefix}{atom}{string.Concat(trailers)}";
         }
 
         public override string VisitName([NotNull] Python3Parser.NameContext context)
@@ -1334,8 +1389,8 @@ try
         public override string VisitTestlist_comp([NotNull] Python3Parser.Testlist_compContext context)
         {
             // 分别获取 test 和 star_expr 上下文
-            var tests = context.test().Select(Visit).ToList();
-            var starExprs = context.star_expr().Select(VisitStar_expr).ToList();
+            var tests = context.test().Select(Visit);
+            var starExprs = context.star_expr().Select(VisitStar_expr);
 
             // 检查是否有 comp_for 子句
             if (context.comp_for() != null)
@@ -1346,7 +1401,7 @@ try
             }
 
             // 如果没有 comp_for 子句，则构建逗号分隔的表达式列表
-            var elements = tests.Concat(starExprs).ToList();
+            var elements = tests.Concat(starExprs);
             return string.Join(", ", elements);
         }
 
@@ -1380,7 +1435,7 @@ try
             // Handle the list of subscripts (e.g., for array indexing).
             return string.Join(", ", context.subscript_()
                 .Select(Visit) // Visit each subscript.
-                .ToList()); // Return them as a comma-separated string.
+                ); // Return them as a comma-separated string.
         }
 
         public override string VisitSubscript_([NotNull] Python3Parser.Subscript_Context context)
@@ -1421,7 +1476,7 @@ try
             // Handle a list of expressions (e.g., arguments in a function call).
             var expressions = context.expr()
                 .Select(Visit) // Visit each expression.
-                .ToList();
+                ;
             return string.Join(", ", expressions); // Return them as a comma-separated string.
         }
 
@@ -1430,7 +1485,7 @@ try
             // Handle a list of tests (e.g., expressions or conditions).
             var tests = context.test()
                 .Select(Visit) // Visit each test.
-                .ToList();
+                ;
             return string.Join(", ", tests); // Return them as a comma-separated string.
         }
 
@@ -1483,6 +1538,7 @@ try
 
         public override string VisitClassdef([NotNull] Python3Parser.ClassdefContext context)
         {
+            NewClassBegin();
             // Class name
             var className = Visit(context.name());
 
@@ -1498,12 +1554,13 @@ try
             return $"class {className}{baseClasses}:\n{blockContent}";
         }
 
+
         public override string VisitArglist([NotNull] Python3Parser.ArglistContext context)
         {
             // Handle the argument list (e.g., in function definitions or calls).
             var args = context.argument()
                 .Select(Visit) // Visit each argument.
-                .ToList();
+                ;
             return string.Join(", ", args); // Return them as a comma-separated string.
         }
 
@@ -1513,8 +1570,12 @@ try
                 // Handle a positional argument with a comprehension (e.g., `x for x in iterable`).
                 return $"{Visit(context.test(0))} {Visit(context.comp_for())}";
             if (context.GetChild(1)?.GetText() == "=")
+            {
                 // Handle keyword arguments (e.g., `name=value`).
-                return $"{Visit(context.test(0))}={Visit(context.test(1))}";
+                return
+                    $"{Visit(context.test(0))}={Visit(context.test(1))}";
+            }
+
             if (context.GetChild(0)?.GetText() == "**")
                 // Handle dictionary unpacking (e.g., `**kwargs`).
                 return $"**{Visit(context.test(0))}";
@@ -1540,24 +1601,18 @@ try
             {
                 result.Append("async ");
             }
-
             // Add the 'for' keyword
             result.Append("for ");
-
             // Visit the exprlist (the variables being iterated over)
             result.Append(Visit(context.exprlist()));
-
             // Add 'in'
             result.Append(" in ");
-
             // Visit the or_test (the iterable)
             result.Append(Visit(context.or_test()));
-
             // Handle the optional comp_iter (nested comprehension or further conditions)
             if (context.comp_iter() == null) return result.ToString();
             result.Append(" ");
             result.Append(Visit(context.comp_iter()));
-
             return result.ToString();
         }
 
@@ -1599,7 +1654,7 @@ try
         public override string VisitStrings([NotNull] Python3Parser.StringsContext context)
         {
             // Handle string literals (e.g., `"hello"`).
-            return $"\"{context.GetText()}\""; // Return the string wrapped in quotes.
+            return context.GetText(); // Return the string wrapped in quotes.
         }
 
     }

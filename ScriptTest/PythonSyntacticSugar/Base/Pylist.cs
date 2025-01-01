@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 
 namespace SyntacticSugar;
 
-public class PyList<T> : Pytuple<T>, IPyObject
+public class PyList<T> : List<T>, IPyObject
 {
     public PyList(): base()
     {
@@ -15,6 +15,49 @@ public class PyList<T> : Pytuple<T>, IPyObject
     {
     }
 
+    public PyList(T[] collection) : base(collection)
+    {
+    }
+
+    
+    // 支持切片操作
+    public PyList<T> this[int start, int end]
+    {
+        get
+        {
+            if (start < 0) start += Count; // 支持负索引
+            if (end < 0) end += Count;
+            if (start < 0 || end > Count || start > end) throw new ArgumentOutOfRangeException("Slice indices out of range");
+
+            var sliced = new PyList<T>();
+            for (int i = start; i < end; i++) sliced.Add(base[i]);
+            return sliced;
+        }
+    }
+
+    // 支持步长的切片访问器
+    public PyList<T> this[int start, int? end, int step]
+    {
+        get
+        {
+            var result = new PyList<T>();
+            int count = this.Count;
+            int actualEnd = end ?? count;
+
+            if (step > 0)
+            {
+                for (int i = start; i < actualEnd && i < count; i += step)
+                    result.Add(this[i]);
+            }
+            else if (step < 0)
+            {
+                for (int i = start; i > actualEnd && i >= 0; i += step)
+                    result.Add(this[i]);
+            }
+
+            return result;
+        }
+    }
     // 重写 ToString 方法，支持打印
     public void extend(IList<T> a)
     {
@@ -25,6 +68,10 @@ public class PyList<T> : Pytuple<T>, IPyObject
     public void append(T obj)
     {
         this.Add(obj);
+    }
+    public int count(T obj)
+    {
+        return this.Count;
     }
 
     // list.extend(seq)
@@ -143,7 +190,7 @@ public class PyList<T> : Pytuple<T>, IPyObject
     }
 
     public List<string> __dir__() {
-        // Return a list of method names (in this case, the methods of Pytuple)
+        // Return a list of method names (in this case, the methods of PyList)
         return new List<string> { "__add__", "__contains__", "__delattr__", "__delitem__", "__iter__", "__len__", "__str__", "__repr__", "__eq__" };
     }
 
@@ -266,5 +313,25 @@ public class PyList<T> : Pytuple<T>, IPyObject
         Console.WriteLine("Method __subclasshook__ is not directly applicable in C#.");
     }
     
+    // + 运算符：合并两个列表
+    public static PyList<T> operator +(PyList<T> a, IList<T> b)
+    {
+        a.AddRange(b);
+        return a;
+    }
+    // * 运算符：重复列表
+    public static PyList<T> operator *(PyList<T> a, int times)
+    {
+        for (int i = 0; i < times; i++)
+        {
+            a.AddRange(a);
+        }
+        return a;
+    }
+    // 重写 ToString 方法，支持打印
+    public override string ToString()
+    {
+        return "[" + string.Join(", ", this) + "]";
+    }
     
 }

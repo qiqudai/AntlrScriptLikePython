@@ -1,3 +1,37 @@
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2014 by Bart Kiers
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * Project      : python3-parser; an ANTLR4 grammar for Python 3
+ *                https://github.com/bkiers/python3-parser
+ * Developed by : Bart Kiers, bart@big-o.nl
+ */
+
+// $antlr-format alignTrailingComments true, columnLimit 150, maxEmptyLinesToKeep 1, reflowComments false, useTab false
+// $antlr-format allowShortRulesOnASingleLine true, allowShortBlocksOnASingleLine true, minEmptyLines 0, alignSemicolons ownLine
+// $antlr-format alignColons trailing, singleLineOverrulesHangingColon true, alignLexerCommands true, alignLabels true, alignTrailers true
 
 lexer grammar Python3Lexer;
 
@@ -19,21 +53,19 @@ options {
  * lexer rules
  */
 
-STRING: STRING_LITERAL | BYTES_LITERAL | STRING_QUICK;
+STRING: STRING_LITERAL | BYTES_LITERAL;
 
 NUMBER: INTEGER | FLOAT_NUMBER | IMAG_NUMBER;
 
 INTEGER: DECIMAL_INTEGER | OCT_INTEGER | HEX_INTEGER | BIN_INTEGER;
 
-AND         : 'and';  // 匹配 'and' 或 '||'
-OR         : 'or';
-NOT        : 'not';
+AND        : 'and';
 AS         : 'as';
 ASSERT     : 'assert';
 ASYNC      : 'async';
 AWAIT      : 'await';
 BREAK      : 'break';
-CASE       : 'case'; 
+CASE       : 'case';
 CLASS      : 'class';
 CONTINUE   : 'continue';
 DEF        : 'def';
@@ -41,48 +73,33 @@ DEL        : 'del';
 ELIF       : 'elif';
 ELSE       : 'else';
 EXCEPT     : 'except';
-TRUE  : [Tt][Rr][Uu][Ee];
-FALSE : [Ff][Aa][Ll][Ss][Ee];
+FALSE      : 'False';
 FINALLY    : 'finally';
 FOR        : 'for';
 FROM       : 'from';
-//GLOBAL     : 'global';
+GLOBAL     : 'global';
 IF         : 'if';
 IMPORT     : 'import';
 IN         : 'in';
 IS         : 'is';
 LAMBDA     : 'lambda';
-MATCH      : 'match'| 'switch';
-NONE       : [Nn][oO][Nn][Ee] | [nN][Ii][Ll];
-//NONLOCAL   : 'nonlocal';
+MATCH      : 'match';
+NONE       : 'None';
+NONLOCAL   : 'nonlocal';
+NOT        : 'not';
+OR         : 'or';
 PASS       : 'pass';
 RAISE      : 'raise';
 RETURN     : 'return';
+TRUE       : 'True';
 TRY        : 'try';
 UNDERSCORE : '_';
 WHILE      : 'while';
 WITH       : 'with';
 YIELD      : 'yield';
-LAMBDA_OP : '=>';  // 定义 '=>' 操作符
-LAM : 'lam';  // 定义 'lam' 为关键字
-INCREMENT : '++';
-DECREMENT : '--';
-AND2         : '&&';  // 匹配 'and' 或 '||'
-OR2         : '||';
-NOT2        : '!';
 
-SECTION_FUNCTION : '[@';
-ASYNC_SECTION_FUNCTION : '[`@' ;
-PRIVATE_SECTION_FUNCTION : '[~';
-ASYNC_PRIVATE_SECTION_FUNCTION : '[`~';
+NEWLINE: ({this.atStartOfInput()}? SPACES | ( '\r'? '\n' | '\r' | '\f') SPACES?) {this.onNewLine();};
 
-NEWLINE: ({this.atStartOfInput()}? SPACES | ( '\r'? '\n' | '\r') SPACES?) {this.onNewLine();};
-
-//fragment NEWLINE:
-//    '\r\n'
-//    | '\r'
-//    | '\n'
-//;
 /// identifier   ::=  id_start id_continue*
 NAME: ID_START ID_CONTINUE*;
 
@@ -120,7 +137,6 @@ OPEN_PAREN         : '(' {this.openBrace();};
 CLOSE_PAREN        : ')' {this.closeBrace();};
 COMMA              : ',';
 COLON              : ':';
-QUEST              : '?';
 SEMI_COLON         : ';';
 POWER              : '**';
 ASSIGN             : '=';
@@ -133,9 +149,9 @@ LEFT_SHIFT         : '<<';
 RIGHT_SHIFT        : '>>';
 ADD                : '+';
 MINUS              : '-';
-IDIV                : '/';
+DIV                : '/';
 MOD                : '%';
-DIV               : '/.';
+IDIV               : '//';
 NOT_OP             : '~';
 OPEN_BRACE         : '{' {this.openBrace();};
 CLOSE_BRACE        : '}' {this.closeBrace();};
@@ -162,7 +178,7 @@ RIGHT_SHIFT_ASSIGN : '>>=';
 POWER_ASSIGN       : '**=';
 IDIV_ASSIGN        : '//=';
 
-SKIP_: ( SPACES | COMMENT | COMMENT2 | LINE_JOINING) -> skip;
+SKIP_: ( SPACES | COMMENT | LINE_JOINING) -> skip;
 
 UNKNOWN_CHAR: .;
 
@@ -258,7 +274,6 @@ fragment BYTES_ESCAPE_SEQ: '\\' [\u0000-\u007F];
 fragment SPACES: [ \t]+;
 
 fragment COMMENT: '#' ~[\r\n\f]*;
-fragment COMMENT2: '//' ~[\r\n\f]*;
 
 fragment LINE_JOINING: '\\' SPACES? ( '\r'? '\n' | '\r' | '\f');
 
@@ -295,8 +310,4 @@ fragment ID_CONTINUE:
     | [\p{Pc}]
     //| [\p{Other_ID_Continue}]
     | UNICODE_OIDC
-;
-
-// 不需要引号的字符串
-fragment STRING_QUICK: (~[0-9\r\n\f \t'#"]+) | (STRING_ESCAPE_SEQ | ~[\r\n\f \t'#"])+
 ;

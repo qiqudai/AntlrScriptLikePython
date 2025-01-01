@@ -46,17 +46,6 @@ options {
 // All comments that start with "///" are copy-pasted from
 // The Python Language Reference
 
-section
-    : classdef | mfunc | masyncfunc
-    ;
-    
-mfunc
-    : (SECTION_FUNCTION | PRIVATE_SECTION_FUNCTION) name parameters ('->' test)? ']' NEWLINE + block
-    ;
-masyncfunc
-    : (ASYNC_SECTION_FUNCTION | ASYNC_PRIVATE_SECTION_FUNCTION) name parameters ('->' test)? ']' NEWLINE+ block
-    ;
-
 single_input
     : NEWLINE
     | simple_stmts
@@ -65,12 +54,11 @@ single_input
 
 file_input
     : (NEWLINE | stmt)* EOF
-//    : (NEWLINE | section)* EOF
     ;
 
-//eval_input
-//    : testlist NEWLINE* EOF
-//    ;
+eval_input
+    : testlist NEWLINE* EOF
+    ;
 
 decorator
     : '@' dotted_name ('(' arglist? ')')? NEWLINE
@@ -89,7 +77,7 @@ async_funcdef
     ;
 
 funcdef
-    : 'def' name parameters ('->' test)? ':'? block
+    : 'def' name parameters ('->' test)? ':' block
     ;
 
 parameters
@@ -131,8 +119,8 @@ vfpdef
     ;
 
 stmt
-    : compound_stmt
-    | simple_stmts
+    : simple_stmts
+    | compound_stmt
     ;
 
 simple_stmts
@@ -146,8 +134,8 @@ simple_stmt
         | pass_stmt
         | flow_stmt
         | import_stmt
-//        | global_stmt
-//        | nonlocal_stmt
+        | global_stmt
+        | nonlocal_stmt
         | assert_stmt
     )
     ;
@@ -263,29 +251,29 @@ dotted_name
     : name ('.' name)*
     ;
 
-//global_stmt
-//    : 'global' name (',' name)*
-//    ;
+global_stmt
+    : 'global' name (',' name)*
+    ;
 
-//nonlocal_stmt
-//    : 'nonlocal' name (',' name)*
-//    ;
+nonlocal_stmt
+    : 'nonlocal' name (',' name)*
+    ;
 
 assert_stmt
     : 'assert' test (',' test)?
     ;
 
 compound_stmt
-    : funcdef
-    | classdef
-    | decorated
-    | async_stmt
+    : if_stmt
     | while_stmt
     | for_stmt
     | try_stmt
     | with_stmt
+    | funcdef
+    | classdef
+    | decorated
+    | async_stmt
     | match_stmt
-    | if_stmt
     ;
 
 async_stmt
@@ -293,29 +281,28 @@ async_stmt
     ;
 
 if_stmt
-    : 'if' test ':'? block ('elif' test ':'? block)* ('else' ':'? block)?
+    : 'if' test ':' block ('elif' test ':' block)* ('else' ':' block)?
     ;
 
 while_stmt
-    : 'while' test ':'? block ('else' ':'? block)?
+    : 'while' test ':' block ('else' ':' block)?
     ;
 
 for_stmt
-    : 'for' exprlist 'in' testlist ':'? block ('else' ':'? block)?
+    : 'for' exprlist 'in' testlist ':' block ('else' ':' block)?
     ;
 
 try_stmt
     : (
-        'try' ':'? block 
-        (
-            (except_clause ':'? block)+ ('else' ':'? block)? ('finally' ':'? block)?
-            | 'finally' ':'? block
+        'try' ':' block (
+            (except_clause ':' block)+ ('else' ':' block)? ('finally' ':' block)?
+            | 'finally' ':' block
         )
     )
     ;
 
 with_stmt
-    : 'with' with_item (',' with_item)* ':'? block
+    : 'with' with_item (',' with_item)* ':' block
     ;
 
 with_item
@@ -333,7 +320,7 @@ block
     ;
 
 match_stmt
-    : (MATCH) subject_expr ':'? NEWLINE INDENT case_block+ DEDENT
+    : 'match' subject_expr ':' NEWLINE INDENT case_block+ DEDENT
     ;
 
 subject_expr
@@ -391,18 +378,18 @@ literal_pattern
     : signed_number { this.CannotBePlusMinus() }?
     | complex_number
     | strings
-    | NONE
-    | TRUE
-    | FALSE
+    | 'None'
+    | 'True'
+    | 'False'
     ;
 
 literal_expr
     : signed_number { this.CannotBePlusMinus() }?
     | complex_number
     | strings
-    | NONE
-    | TRUE
-    | FALSE
+    | 'None'
+    | 'True'
+    | 'False'
     ;
 
 complex_number
@@ -519,7 +506,7 @@ keyword_pattern
     ;
 
 test
-    : or_test ('?' or_test ':' test)?  // 使用 QUEST 和 COLON
+    : or_test ('if' or_test 'else' test)?
     | lambdef
     ;
 
@@ -529,23 +516,23 @@ test_nocond
     ;
 
 lambdef
-    : ('lam' |'lambda') varargslist? ':' test
+    : 'lambda' varargslist? ':' test
     ;
 
 lambdef_nocond
-    : ('lam' |'lambda') varargslist? ':' test_nocond
+    : 'lambda' varargslist? ':' test_nocond
     ;
 
 or_test
-    : and_test (('or' |'||') and_test)*
+    : and_test ('or' and_test)*
     ;
 
 and_test
-    : not_test (('and' |'&&') not_test)*
+    : not_test ('and' not_test)*
     ;
 
 not_test
-    : ('not' |'!') not_test
+    : 'not' not_test
     | comparison
     ;
 
@@ -564,9 +551,9 @@ comp_op
     | '<>'
     | '!='
     | 'in'
-    | 'not' 'in' | '!' 'in'
+    | 'not' 'in'
     | 'is'
-    | 'is' 'not' | '!' 'is'
+    | 'is' 'not'
     ;
 
 star_expr
@@ -577,14 +564,12 @@ expr
     : atom_expr
     | expr '**' expr
     | ('+' | '-' | '~')+ expr
-    | expr ('*' | '@' | '/' | '%' | '/.') expr
+    | expr ('*' | '@' | '/' | '%' | '//') expr
     | expr ('+' | '-') expr
     | expr ('<<' | '>>') expr
     | expr '&' expr
     | expr '^' expr
     | expr '|' expr
-    | expr INCREMENT                 // 后缀自增 i++
-    | INCREMENT expr                 // 前缀自增 ++i
     ;
 
 //expr: xor_expr ('|' xor_expr)*;
@@ -607,15 +592,15 @@ atom
     | NUMBER
     | STRING+
     | '...'
-    | NONE
-    | TRUE
-    | FALSE
+    | 'None'
+    | 'True'
+    | 'False'
     ;
 
 name
     : NAME
     | '_'
-    | MATCH
+    | 'match'
     ;
 
 testlist_comp

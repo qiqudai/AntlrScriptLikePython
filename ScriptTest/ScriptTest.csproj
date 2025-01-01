@@ -20,10 +20,15 @@
     <ItemGroup>
       <PackageReference Include="Antlr4.Runtime.Standard" Version="4.13.1" />
       <PackageReference Include="FastMember" Version="1.5.0" />
+      <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.12.0" />
     </ItemGroup>
 
     <ItemGroup>
       <Folder Include="Antlr\py\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Core\Core.csproj" />
     </ItemGroup>
 <!--    <ItemGroup>-->
 <!--        <Antlr4 Include="Python3Parser.g4" />-->

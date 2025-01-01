@@ -45,78 +45,78 @@ namespace SyntacticSugar
         
         // 重载加法操作符
         //确定值
-        public static long operator +(pyint a, pyint b) => (long)a + (long)b;
-        public static long operator +(pyint a, long b) => (long)a + b;
-        public static long operator +(pyint a, int b) => (long)a + b;
-        public static long operator +(long a, pyint b) => a + (long)b;
-        public static long operator +(int a, pyint b) => a + (long)b;
-        public static double operator +(float a, pyint b) => a + b;
-        public static double operator +(pyint a, float b) => a + b;
-        public static double operator +(pyint a, double b) => a + b;
-        public static double operator +(double a, pyint b) => a + b;
+        public static long operator +(pyint a, pyint b) => (long)a._value + (long)b._value;
+        public static long operator +(pyint a, long b) => (long)a._value + b;
+        public static long operator +(pyint a, int b) => (long)a._value + b;
+        public static long operator +(long a, pyint b) => a + (long)b._value;
+        public static long operator +(int a, pyint b) => a + (long)b._value;
+        public static double operator +(float a, pyint b) => a + b._value;
+        public static double operator +(pyint a, float b) => a._value + b;
+        public static double operator +(pyint a, double b) => a._value + b;
+        public static double operator +(double a, pyint b) => a + b._value;
 
         // 重载减法操作符
-        public static long operator -(pyint a, pyint b) => (long)a - (long)b;
-        public static long operator -(pyint a, long b) => (long)a - b;
-        public static long operator -(pyint a, int b) => (long)a - b;
-        public static long operator -(long a, pyint b) => a - (long)b;
-        public static long operator -(int a, pyint b) => a - (long)b;
-        public static double operator -(float a, pyint b) => a - b;
-        public static double operator -(pyint a, double b) => a - b;
-        public static double operator -(pyint a, float b) => a - b;
-        public static double operator -(double a, pyint b) => a - b;
+        public static long operator -(pyint a, pyint b) => (long)a._value - (long)b._value;
+        public static long operator -(pyint a, long b) => (long)a._value - b;
+        public static long operator -(pyint a, int b) => (long)a._value - b;
+        public static long operator -(long a, pyint b) => a - (long)b._value;
+        public static long operator -(int a, pyint b) => a - (long)b._value;
+        public static double operator -(float a, pyint b) => a - (double)b._value;
+        public static double operator -(pyint a, double b) => (double)a._value - b;
+        public static double operator -(pyint a, float b) => (double)a._value - b;
+        public static double operator -(double a, pyint b) => a - b._value;
 
         // 重载乘法操作符
-        public static long operator *(pyint a, pyint b) => (long)a * (long)b;
-        public static long operator *(pyint a, long b) => (long)a * b;
-        public static long operator *(pyint a, int b) => (long)a * b;
-        public static long operator *(long a, pyint b) => a * (long)b;
-        public static long operator *(int a, pyint b) => a * (long)b;
-        public static pyint operator *(float a, pyint b) => a * b;
-        public static pyint operator *(pyint a, double b) => a * b;
-        public static pyint operator *(pyint a, float b) => a * b;
-        public static pyint operator *(double a, pyint b) => a * b;
+        public static long operator *(pyint a, pyint b) => (long)a._value * (long)b._value;
+        public static long operator *(pyint a, long b) => (long)a._value * b;
+        public static long operator *(pyint a, int b) => (long)a._value * b;
+        public static long operator *(long a, pyint b) => a * (long)b._value;
+        public static long operator *(int a, pyint b) => a * (long)b._value;
+        public static double operator *(float a, pyint b) => a * b._value;
+        public static double operator *(pyint a, double b) => a._value * b;
+        public static double operator *(pyint a, float b) => a._value * b;
+        public static double operator *(double a, pyint b) => a * b._value;
 
         // 重载除法操作符
-        public static long operator /(pyint a, pyint b) => (long)a / (long)b;
-        public static long operator /(pyint a, long b) => (long)a / b;
-        public static long operator /(pyint a, int b) => (long)a / b;
-        public static long operator /(long a, pyint b) => a / (long)b;
-        public static long operator /(int a, pyint b) => a / (long)b;
-        public static double operator /(pyint a, double b) => a / b;
-        public static double operator /(pyint a, float b) => a / b;
-        public static double operator /(double a, pyint b) => a / b;
-        public static double operator /(float a, pyint b) => a / b;
+        public static long operator /(pyint a, pyint b) => (long)a._value / (long)b._value;
+        public static long operator /(pyint a, long b) => (long)a._value / b;
+        public static long operator /(pyint a, int b) => (long)a._value / b;
+        public static long operator /(long a, pyint b) => a / (long)b._value;
+        public static long operator /(int a, pyint b) => a / (long)b._value;
+        public static double operator /(pyint a, double b) => a._value / b;
+        public static double operator /(pyint a, float b) => a._value / b;
+        public static double operator /(double a, pyint b) => a / b._value;
+        public static double operator /(float a, pyint b) => a / b._value;
 
         // 隐式转换为 long
-        public static implicit operator long(pyint number) => (long)number;
-        public static implicit operator int(pyint number) => (int)(long)number;
-        public static implicit operator uint(pyint number) => (uint)(long)number;
-        public static implicit operator short(pyint number) => (short)(long)number;
-        public static implicit operator ushort(pyint number) => (ushort)(long)number;
-        public static implicit operator byte(pyint number) => (byte)(long)number;
-        public static implicit operator sbyte(pyint number) => (sbyte)(long)number;
-        public static implicit operator ulong(pyint number) => (ulong)(long)number;
+        public static implicit operator long(pyint number) => (long)number._value;
+        public static implicit operator int(pyint number) => (int)number._value;
+        public static implicit operator uint(pyint number) => (uint)number._value;
+        public static implicit operator short(pyint number) => (short)number._value;
+        public static implicit operator ushort(pyint number) => (ushort)number._value;
+        public static implicit operator byte(pyint number) => (byte)number._value;
+        public static implicit operator sbyte(pyint number) => (sbyte)number._value;
+        public static implicit operator ulong(pyint number) => (ulong)number._value;
         // 隐式转换为 double
         //public static implicit operator double(pyint number) => number;
-        public static implicit operator float(pyint number) => (float)number;
-        public static implicit operator double(pyint number) => number;
-        public static implicit operator decimal(pyint number) => number;
+        public static implicit operator float(pyint number) => (float)number._value;
+        public static implicit operator double(pyint number) => number._value;
+        public static implicit operator decimal(pyint number) => (decimal)number._value;
 
         // 隐式转换为 PyNumber 从 long
-        public static implicit operator pyint(long value) => value;
-        public static implicit operator pyint(int value) => value;
-        public static implicit operator pyint(uint value) => value;
-        public static implicit operator pyint(ulong value) => value;
-        public static implicit operator pyint(byte value) => value;
-        public static implicit operator pyint(bool value) => value;
-        public static implicit operator pyint(char value) => value;
-        public static implicit operator pyint(short value) => value;
-        public static implicit operator pyint(ushort value) => value;
+        public static implicit operator pyint(long value) => new pyint(value);
+        public static implicit operator pyint(int value) => new pyint(value);
+        public static implicit operator pyint(uint value) => new pyint(value);
+        public static implicit operator pyint(ulong value) => new pyint(value);
+        public static implicit operator pyint(byte value) => new pyint(value);
+        public static implicit operator pyint(bool value) => new pyint(value);
+        public static implicit operator pyint(char value) => new pyint(value);
+        public static implicit operator pyint(short value) => new pyint(value);
+        public static implicit operator pyint(ushort value) => new pyint(value);
 
         // 隐式转换为 PyNumber 从 double
-        public static implicit operator pyint(double value) => value;
-        public static implicit operator pyint(float value) => value;
+        public static implicit operator pyint(double value) => new pyint(value);
+        public static implicit operator pyint(float value) => new pyint(value);
 
         #endregion
         

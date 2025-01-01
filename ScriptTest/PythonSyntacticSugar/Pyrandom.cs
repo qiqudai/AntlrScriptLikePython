@@ -68,7 +68,7 @@ namespace SyntacticSugar
         }
 
         // choice()
-        public PyVariable choice(list seq)
+        public PyVariable choice(IList<PyVariable> seq)
         {
             if (seq.Count == 0) throw new InvalidOperationException("Cannot choose from an empty sequence.");
             return seq[_random.Next(seq.Count)];
@@ -97,13 +97,13 @@ namespace SyntacticSugar
             else
             {
                 // Weighted distribution
-                double totalWeight = weights.Sum(w => (double)w.get());
+                double totalWeight = weights.Sum(w => (double)w);
                 var cumulativeWeights = new List<double>();
                 double cumulativeSum = 0;
 
                 foreach (var weight in weights)
                 {
-                    cumulativeSum += (double)weight.get();
+                    cumulativeSum += (double)weight;
                     cumulativeWeights.Add(cumulativeSum);
                 }
 
@@ -234,10 +234,27 @@ namespace SyntacticSugar
 
             // Test random methods
             Console.WriteLine(pyRandom.randint(1, 10));
-            Console.WriteLine(pyRandom.choice(new list
-                { new PyVariable(1), new PyVariable(2), new PyVariable(3), new PyVariable(4) }));
+            Console.WriteLine(pyRandom.choice(new list([1, 2, 3, 4])).ToString() );
+            
+            DelegateVarRet intDelegate = (PyVariable[] args) => AddOne(args[0]);  // 通过数组传递参数
+            DelegateVarRet intDelegate2 = (PyVariable[] args) => AddTwo(args[0], args[1]);  // 通过数组传递参数
+            PyVariable result = intDelegate(10);
+            Console.WriteLine(result.ToString());  // 输出 6
+            Console.WriteLine(intDelegate2(10, 20).ToString());  // 输出 6
+            DelegateVarVoid intDelegate3 = (PyVariable[] args) => PrintX(args[0]);  // 通过数组传递参数
+            intDelegate3(10);
             Console.WriteLine(pyRandom.random());
             Console.WriteLine(pyRandom.uniform(1.0, 5.0));
         }
+        static PyVariable AddOne(PyVariable x) => x + 1;
+
+        static void PrintX(PyVariable x)
+        {
+            Console.WriteLine(x.ToString());
+        }
+
+        static PyVariable AddTwo(PyVariable x, PyVariable y) => x + y;
+        static PyVariable AddThree(PyVariable x, PyVariable y) => x + y;
+        static string ToUpperCase(string s) => s.ToUpper();
     }
 }
