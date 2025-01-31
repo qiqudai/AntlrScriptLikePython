@@ -143,7 +143,7 @@ public class PyList<T> : List<T>, IPyObject
     
     public static void Test()
     {
-        var li = new PyList<int> { 1, 2, 4, 3 };
+        list li = [ 1, 2, 4, 3 ];
         //倒数
         var a = li[^1];
         //完整拷贝

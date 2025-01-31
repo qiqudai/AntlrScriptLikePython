@@ -26,6 +26,12 @@ public record struct PyVariable : IDisposable
     private TypeFlag _type; // 当前存储内容的类型标志
     private object? _object; // 可选的句柄（用于引用类型）
 
+    public PyVariable()
+    {
+        _value = 0;
+        _object = null;
+        _type = TypeFlag.None;
+    }
 
     // 构造函数（整型）
     public PyVariable(long value)

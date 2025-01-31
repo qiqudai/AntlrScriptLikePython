@@ -8,3 +8,7 @@ global using calendar = SyntacticSugar.calendar;
 global using tuple = SyntacticSugar.Pytuple<SyntacticSugar.PyVariable>;
 global using pyclass = SyntacticSugar.PyClass;
 global using pyvar = SyntacticSugar.PyVariable;
+global using pystring = SyntacticSugar.PyString;
+
+
+using static SyntacticSugar.systemFunc;

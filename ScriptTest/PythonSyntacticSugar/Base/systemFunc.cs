@@ -1,5 +1,6 @@
 using System.Numerics;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace SyntacticSugar
 {
@@ -8,6 +9,17 @@ namespace SyntacticSugar
     public static class systemFunc
     {
 
+        public static string ToSnakeCase(string input)
+        {
+            if (string.IsNullOrEmpty(input))
+                return input;
+
+            // 替换 PascalCase / camelCase 为 snake_case
+            string result = Regex.Replace(input, @"([a-z0-9])([A-Z])", "$1_$2");
+
+            // 统一转换为小写
+            return result.ToLower();
+        }
         // A
         public static int abs(int x) => Math.Abs(x);
 
@@ -137,7 +149,7 @@ namespace SyntacticSugar
         // P
         public static int pow(int x, int y) => (int)Math.Pow(x, y);
         
-        public static void Print(object[] args = null, string sep = " ", string end = "\n", TextWriter file = null,
+        public static void print(object[] args = null, string sep = " ", string end = "\n", TextWriter file = null,
             bool? flush = null)
         {
             // 默认输出到 Console

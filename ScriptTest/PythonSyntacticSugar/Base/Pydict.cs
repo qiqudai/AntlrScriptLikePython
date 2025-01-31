@@ -146,7 +146,7 @@ namespace SyntacticSugar
         // 测试代码
         public static void Test()
         {
-            var dict = new PyDict<string, int>
+            var dict = new PyDict<string, pyvar>
             {
                 { "apple", 1 },
                 { "banana", 2 },
@@ -155,17 +155,18 @@ namespace SyntacticSugar
             };
 
             // 字典推导式 (通过 FromEnumerable 实现)
-            var dictComprehension = PyDict<string, int>.FromEnumerable(
-                new[] { "apple", "banana", "cherry", "date" }.Select(x => new KeyValuePair<string, int>(x, x.Length))
+            var dictComprehension = PyDict<string, pyvar>.FromEnumerable(
+                new[] { "apple", "banana", "cherry", "date" }.Select(x => new KeyValuePair<string, pyvar>(x, x.Length))
             );
             Console.WriteLine($"Dict Comprehension: {dictComprehension}");
 
             // + 运算符测试
-            var dict2 = new PyDict<string, int>
+            var dict2 = new PyDict<string, pyvar>
             {
                 { "elderberry", 5 },
                 { "fig", 6 }
             };
+            dict2["abc"] = "abb";
             var merged = dict + dict2;
             Console.WriteLine($"Merged: {merged}");
 
@@ -182,7 +183,7 @@ namespace SyntacticSugar
             Console.WriteLine("Values:");
             foreach (var value in dict.values())
             {
-                Console.WriteLine(value);
+                Console.WriteLine(value.ToString());
             }
             Console.WriteLine("Items:");
             foreach (var kvp in dict.items())
@@ -191,7 +192,7 @@ namespace SyntacticSugar
             }
 
             // .update() 测试
-            dict.update(new PyDict<string, int> { { "grape", 7 } });
+            dict.update(new PyDict<string, pyvar> { { "grape", 7 } });
             Console.WriteLine($"After Update: {dict}");
 
             // .setdefault() 测试
@@ -221,7 +222,7 @@ namespace SyntacticSugar
             PyDict<string, object>.unpackAndPrint(unpackedDict);
 
             // 合并多个字典
-            var mergedDict = PyDict<string, int>.mergeDictionaries(dict, dict2);
+            var mergedDict = PyDict<string, pyvar>.mergeDictionaries(dict, dict2);
             Console.WriteLine($"Merged Dictionaries: {mergedDict}");
 
             // 模式匹配测试

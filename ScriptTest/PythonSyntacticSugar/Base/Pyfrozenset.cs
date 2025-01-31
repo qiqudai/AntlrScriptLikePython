@@ -292,7 +292,7 @@ namespace SyntacticSugar
         // pop()
         public T pop()
         {
-            if (this.Count == 0) throw new InvalidOperationException("Set is empty.");
+            if (this.Count == 0) throw new InvalidOperationException("Pyfrozenset is empty.");
             var element = this.First();
             this.Remove(element);
             return element;
